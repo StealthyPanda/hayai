@@ -163,7 +163,7 @@ result<size_t> tokenizer::parse()
     r.ok = true;
 
     //traversing the linked list of tokens
-    llnode<stringslice> *sslln = this->tokens.root->next;
+    llnode<stringslice> *sslln = this->tokens.root->next, *cursor;
     stringslice *ssbuff;
     while (sslln != NULL)
     {
@@ -182,6 +182,7 @@ result<size_t> tokenizer::parse()
             equal(*sslln->prev->val, (char*)"=")
             )) ||
             (equal(*ssbuff, (char*)"&") && equal(*sslln->prev->val, (char*)"&")) ||
+            (equal(*ssbuff, (char*)"/") && equal(*sslln->prev->val, (char*)"/")) ||
             (equal(*ssbuff, (char*)"|") && equal(*sslln->prev->val, (char*)"|")) 
         )
         {
@@ -314,6 +315,46 @@ result<size_t> tokenizer::parse()
             }
         }
         
+
+        sslln = sslln->next;
+    }
+
+
+    //dealing with comments
+    sslln = this->tokens.root;
+    while (sslln != NULL)
+    {
+        ssbuff = sslln->val;
+        if (equal(*ssbuff, "//"))
+        {
+            cursor = sslln;
+            ssbuff = cursor->val;
+            while ((cursor != NULL) && !equal(*ssbuff, "\n"))
+            {
+                cursor = cursor->next;
+                ssbuff = cursor->val;
+            }
+
+            if (cursor == NULL) cursor = this->tokens.end;
+
+            if (sslln->prev != NULL) sslln->prev->next = cursor->next;
+            if (cursor->next != NULL) cursor->next->prev = sslln->prev;
+
+            size_t size = 0;
+            while (sslln != cursor)
+            {
+                cursor = cursor->prev;
+                delete cursor->next;
+                size++;
+            }
+
+            delete sslln;
+            size++;
+
+            this->tokens.length -= 1;
+            this->length -= 1;
+
+        }
 
         sslln = sslln->next;
     }
