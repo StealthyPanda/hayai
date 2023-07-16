@@ -1,0 +1,8 @@
+{
+    "compiler": "",
+    "inputs": ["./*.c"],
+    "includes": [],
+    "run": true,
+    "flags": ["-Wno-all", "-Wno-write-strings"],
+    "output": ""
+}

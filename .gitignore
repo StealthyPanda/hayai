@@ -1,0 +1,6 @@
+testfile
+templates
+*.exe
+.*/
+main
+*.c
