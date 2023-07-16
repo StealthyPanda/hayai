@@ -179,9 +179,12 @@ result<string> typechecker::gettype(astnode *root)
             res = gettype(param->val);
             if (!res.ok) return res;
 
+            stringslice ss = getslice(tp->val);
+
             if (!(
                 equal(res.value, tp->val) ||
-                (numerictype(res.value) && numerictype(tp->val))
+                (numerictype(res.value) && numerictype(tp->val)) ||
+                equal(ss, _void)
             ))
             {
                 dstring emsg;

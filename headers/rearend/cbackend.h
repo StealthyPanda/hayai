@@ -592,7 +592,14 @@ result<dstring> generatefunction(astnode* root)
     output->append(stringof(frt->tokenstr));
     output->append(_space);
     if (!equal(id->tokenstr, "print")) output->append(stringof(id->tokenstr));
-    else output->append("_print_temp");
+    else 
+    {
+        dstring *empty = new dstring;
+
+        empty->append("");
+
+        return result<dstring>(empty);
+    }
     output->append(_lrb);
 
     cursor = args.root;
