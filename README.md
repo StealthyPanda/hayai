@@ -1,1 +1,3 @@
-# hayai
+# hayai💨
+
+Development Repo for Hayai.
