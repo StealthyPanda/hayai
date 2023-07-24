@@ -31,7 +31,7 @@ fun nthfib(i32 n)
 }
 
 fun main() {
-    let f64 i = 0.0;
+    let f32 i = 0.0;
 
     ptr pointer = new i32;
 
