@@ -1,5 +1,1 @@
-fun main()
-{
-    epicchungus();
-    return 0;
-}
+let bruh =  "somin" "one more just in case" huh ;

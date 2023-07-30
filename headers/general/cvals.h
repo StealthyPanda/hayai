@@ -26,6 +26,7 @@ char *_lcb = (char*)"{";
 char *_rcb = (char*)"}";
 char *_semicolon = (char*)";";
 char *_quote = (char*)"\"";
+char *_singlequote = (char*)"'";
 char *_colon = (char*)":";
 char *_equal = (char*)"=";
 char *_tilde = (char*)"~";
@@ -60,6 +61,7 @@ char *_while = (char*)"while";
 char *_for = (char*)"for";
 char *_let = (char*)"let";
 char *_const = (char*)"const";
+char *_ptr = (char*)"ptr";
 
 char *_stl = (char*)
 "#define ui8 unsigned char\n"

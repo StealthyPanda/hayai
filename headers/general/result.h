@@ -118,3 +118,11 @@ void result<T>::print()
 }
 
 // #define validorreturn(res) if (!res.ok) return res;
+
+#define _consumeres(res) {auto r = res; if (!r.ok) return r;}
+#define _consumecast(res, cast) {auto r = res; if (!r.ok) return result<cast>(r.err);}
+#define _consumeexit(res) {auto r = res; if (!r.ok) { res.err.print(); return 69; }}
+
+#define _validate(res) if (!res.ok) return res;
+#define _validatecast(res, cast) if (!res.ok) return result<cast>(res.err);
+#define _validateexit(res) if (!res.ok){ res.err.print(); return 69;}

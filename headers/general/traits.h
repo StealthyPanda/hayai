@@ -75,6 +75,7 @@ __trait_op(notequalto) \
 \
 /*variable stuff*/\
 __trait_op(vardeclarator) \
+__trait_op(ptrdeclarator) \
 __trait_op(ismutable) \
 __trait_op(isconst) \
 __trait_op(constdeclarator) \
@@ -321,7 +322,7 @@ traits gettraits(stringslice ss)
             t.newline = 1;
             t.whitespace = 1;
         }
-        else if (equal(ss, _space) || equal(ss, _tab))
+        else if (equal(ss, _space) || equal(ss, _tab) || iswhitespace(*ss.start))
         {
             t.op = 0;
             t.whitespace = 1;
@@ -455,6 +456,11 @@ traits gettraits(stringslice ss)
         {
             t.vardeclarator = 1;
             t.ismutable = 1;
+        }
+        else if (equal(ss, _ptr))
+        {
+            t.ptrdeclarator = 1;
+            // t.ismutable = 1;
         }
         else if (equal(ss, _const))
         {

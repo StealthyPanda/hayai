@@ -1,4 +1,5 @@
 #include <iostream>
+// #include "./headers/frontend/newast.h"
 #include "./headers/frontend/newtok.h"
 
 
@@ -9,41 +10,57 @@ int main()
 
     char* filename = "./syntaxstuff.hy";
 
+    
     tokenizer tk(filename);
-    result<size_t> res = tk.read();
+    result<size_t> res;
 
-    if (!res.ok)
-    {
-        res.err.print();
-        return 69;
-    }
+    res = tk.read();
+    _validateexit(res)
 
-    std::cout << tk.tokens.length << std::endl;
-
-    res = tk.parse();
-
-    if (!res.ok)
-    {
-        res.err.print();
-        return 69;
-    }
-    std::cout << *res.value << std::endl;
-
-    token *tok;
-    result<token> holder;
+   result<token> tres;
     while (tk.available())
     {
-        holder = tk.gettoken();
-        if (!holder.ok)
-        {
-            holder.err.print();
-            return 69;
-        }
+        tk.prestrip();
+        if (tk.available()) tres = tk.gettoken();
+        else break;
+        _validateexit(tres)
 
-        holder.value->print();
+        tres.value->print();
+        std::cout << "\n";
+    }
+    std::cout << "\n\n";
+
+
+    // std::cout << "Reached here\n";
+    res = tk.parse();
+    _validateexit(res)
+
+    // tk.prestrip();
+
+    
+    // result<token> tres;
+    while (tk.available())
+    {
+        tk.prestrip();
+        if (tk.available()) tres = tk.gettoken();
+        else break;
+        _validateexit(tres)
+
+        tres.value->print();
         std::cout << "\n";
     }
 
+
+
+
+    // ast tree(filename);
+    // // tree.parse();
+    // result<astnode> r = processstatement(tk);
+    // if (!r.ok)
+    // {
+    //     r.err.print();
+    //     return 69;
+    // }
 
 
 
