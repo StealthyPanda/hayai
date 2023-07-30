@@ -48,11 +48,15 @@ public:
     char tokbuff[tokbuffsize];
 
     ll<token> tokens;
+    llnode<token> *nexttok;
 
     std::ifstream inputfile;
 
     result<size_t> read();
     result<size_t> parse();
+
+    result<token> gettoken();
+    bool available();
 
     void flush();
 };
@@ -118,10 +122,13 @@ result<size_t> tokenizer::read()
     this->tokens.prepend(new token(string(""), 0));
     this->tokens.postpend(new token(string(""), 0));
 
+    this->nexttok = this->tokens.root;
+
     return result<size_t>(&this->tokens.length);
 }
 
-
+/// @brief parses the read tokens, dealing with 2 character operaters, comments etc.
+/// @return result evaluating to number of tokens after parsing
 result<size_t> tokenizer::parse()
 {
     llnode<token> *curr = this->tokens.root;
@@ -163,7 +170,7 @@ result<size_t> tokenizer::parse()
         {
             size_t x = 0;
             end = curr;
-            std::cout << "Reached here\n";
+            // std::cout << "Reached here\n";
             while ((end->next != NULL) && !equal(end->next->val->tokenstr, _newline))
             {
                 end = end->next;
@@ -184,6 +191,29 @@ result<size_t> tokenizer::parse()
         curr = curr->next;
     }
 
+    this->nexttok = this->tokens.root;
 
     return result<size_t>(&this->tokens.length);
 }
+
+
+/// @brief returns the next token in sequence, if available
+result<token> tokenizer::gettoken()
+{
+
+    if (this->nexttok != NULL)
+    {
+        auto retter = result<token>(this->nexttok->val);
+        this->nexttok = this->nexttok->next;
+        return retter;
+    }
+    else
+        return result<token>(255, "All out of tokens!");
+}
+
+///@brief returns true if tokens are left in sequence
+bool tokenizer::available()
+{
+    return (this->nexttok != NULL);
+}
+

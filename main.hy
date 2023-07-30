@@ -1,4 +1,4 @@
- 
+
 //leave these here for now; i havent yet dealt with C headers yet.
 fun print(str format, void value) : void {}
 //fun print(str format, str value) {}
@@ -7,9 +7,7 @@ fun print(str format, void value) : void {}
 
 
 fun main() {
-    print("Hello world!");
-
-    let _some_identifier == ==;
+    print("%s", "Hello world!");
 
 
     return 0;

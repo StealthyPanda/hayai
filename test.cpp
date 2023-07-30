@@ -27,16 +27,25 @@ int main()
         res.err.print();
         return 69;
     }
+    std::cout << *res.value << std::endl;
 
-    llnode<token> *cursor = tk.tokens.root;
-    while (cursor != NULL)
+    token *tok;
+    result<token> holder;
+    while (tk.available())
     {
-        cursor->val->print();
+        holder = tk.gettoken();
+        if (!holder.ok)
+        {
+            holder.err.print();
+            return 69;
+        }
+
+        holder.value->print();
         std::cout << "\n";
-        cursor = cursor->next;
     }
 
-    std::cout << *res.value << std::endl;
+
+
 
 
     return 0;
