@@ -3,15 +3,15 @@
 #include <iostream>
 #include "strings.h"
 
-/// @brief returns if the given character is either an alphabet or number or '_'
-/// @param c the character to be evaluated 
-bool istokenalpha(char c)
-{
-    if ((97 <= c) && (c <= 122)) return true;
-    if ((65 <= c) && (c <= 90)) return true;
-    if ((48 <= c) && (c <= 57)) return true;
-    return (c == '_');
-}
+// /// @brief returns if the given character is either an alphabet or number or '_'
+// /// @param c the character to be evaluated 
+// bool istokenalpha(char c)
+// {
+//     if ((97 <= c) && (c <= 122)) return true;
+//     if ((65 <= c) && (c <= 90)) return true;
+//     if ((48 <= c) && (c <= 57)) return true;
+//     return (c == '_');
+// }
 
 /// @brief a struct that makes working with string slices easier
 /// Contains a start and end char* that point from the first till the last (both inclusive) characters of the string.
@@ -31,7 +31,7 @@ size_t length(stringslice &ss)
 /// @brief returns a slice of the entire string
 stringslice getslice(string *str)
 {
-    stringslice ss = {str->string, str->string + str->length - 1};
+    stringslice ss = {str->str, str->str + str->length - 1};
     return ss;
 }
 
@@ -39,7 +39,7 @@ stringslice getslice(string *str)
 /// @brief returns a slice of the string from index start to end (start included, end excluded).
 stringslice getslice(string *str, size_t start, size_t end)
 {
-    stringslice ss = {str->string + start, str->string + end - 1};
+    stringslice ss = {str->str + start, str->str + end - 1};
     return ss;
 }
 

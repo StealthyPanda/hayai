@@ -39,7 +39,7 @@ public:
 
     void print()
     {
-        std::cout << "\n[Error#" << (int)this->errorcode << "]:\n";
+        std::cout << "\n[Error#" << (int)this->errorcode << "]: ";
         ::print(&this->errormessage);
         std::cout << "\n";
     }
@@ -112,7 +112,9 @@ void result<T>::print()
     if (this->ok) std::cout << "Result OK";
     else
     {
-        std::cout << "Result Bad: ";
+        std::cout << "Bad Result: ";
         this->err.print();
     }
 }
+
+// #define validorreturn(res) if (!res.ok) return res;

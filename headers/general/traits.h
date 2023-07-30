@@ -16,6 +16,7 @@ __trait_op(statement) \
 __trait_op(expression) \
 __trait_op(datatype) \
 __trait_op(identifier) \
+__trait_op(comment) \
 \
 \
 /*statement stuff*/\
@@ -168,13 +169,14 @@ std::ostream& operator<<(std::ostream& os, traits &t)
 /// @brief finds all the traits that can be automagically inferred from the given token stringslice.
 /// @param ss the token to be evaluated.
 /// @return a `traits` struct instance with all the inferred traits set to 1.
-traits gettraits(stringslice& ss)
+traits gettraits(stringslice ss)
 {
     traits t;
 
     size_t l = length(ss);
 
-    if (l == 1)
+    if (l == 0) return t;
+    else if (l == 1)
     {
         t.op = 1;
         if (equal(ss, _exclamationmark))
@@ -331,6 +333,7 @@ traits gettraits(stringslice& ss)
         else if (equal(ss, _pipe)) t.pipe = 1;
         else if (isstringliteral(ss)) t.stringliteral = 1;
         else if (equal(ss, _arrow)) t.arrow = 1;
+        else if (equal(ss, _comment)) t.comment = 1;
         else if (equal(ss, _gtet))
         {
             t.greaterthanorequalto = 1;
