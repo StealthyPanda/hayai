@@ -17,18 +17,18 @@ int main()
     res = tk.read();
     _validateexit(res)
 
-   result<token> tres;
-    while (tk.available())
-    {
-        tk.prestrip();
-        if (tk.available()) tres = tk.gettoken();
-        else break;
-        _validateexit(tres)
+    result<token> tres;
+    // while (tk.available())
+    // {
+    //     // tk.prestrip();
+    //     if (tk.available()) tres = tk.gettoken();
+    //     else break;
+    //     _validateexit(tres)
 
-        tres.value->print();
-        std::cout << "\n";
-    }
-    std::cout << "\n\n";
+    //     tres.value->print();
+    //     std::cout << "\n";
+    // }
+    // std::cout << "\n\n";
 
 
     // std::cout << "Reached here\n";

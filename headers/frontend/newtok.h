@@ -60,7 +60,7 @@ public:
     bool available();
 
     void prestrip();
-    // void prestrip();
+    void reset();
 
     void flush();
 };
@@ -139,21 +139,24 @@ result<size_t> tokenizer::parse()
 
     llnode<token> *buffer, *end;
 
-    bool done = false;
+    // bool done = false;
 
     while ((curr != NULL) && (curr->next != NULL))
     {
         if (
-            (equal(curr->val->tokenstr, _equal) && equal(curr->next->val->tokenstr, _equal)) ||
-            (equal(curr->val->tokenstr, _exclamationmark) && equal(curr->next->val->tokenstr, _equal)) ||
-            (equal(curr->val->tokenstr, _lesser) && equal(curr->next->val->tokenstr, _equal)) ||
-            (equal(curr->val->tokenstr, _greater) && equal(curr->next->val->tokenstr, _equal)) ||
-            (equal(curr->val->tokenstr, _minus) && equal(curr->next->val->tokenstr, _greater)) ||
-            (equal(curr->val->tokenstr, _vertline) && equal(curr->next->val->tokenstr, _greater)) ||
-            (equal(curr->val->tokenstr, _plus) && equal(curr->next->val->tokenstr, _equal)) ||
-            (equal(curr->val->tokenstr, _star) && equal(curr->next->val->tokenstr, _equal)) ||
-            (equal(curr->val->tokenstr, _fslash) && equal(curr->next->val->tokenstr, _equal)) ||
-            (equal(curr->val->tokenstr, _minus) && equal(curr->next->val->tokenstr, _equal))
+            (curr->val->props.assigner && curr->next->val->props.assigner) ||
+            (curr->val->props.opexclamation && curr->next->val->props.assigner) ||
+            (curr->val->props.oplesserthan && curr->next->val->props.assigner) ||
+            (curr->val->props.opgreaterthan && curr->next->val->props.assigner) ||
+            (curr->val->props.opminus && curr->next->val->props.assigner) ||
+            (curr->val->props.opplus && curr->next->val->props.assigner) ||
+            (curr->val->props.opslash && curr->next->val->props.assigner) ||
+            (curr->val->props.opstar && curr->next->val->props.assigner) ||
+            (curr->val->props.vertline && curr->next->val->props.opgreaterthan) ||
+            (curr->val->props.opminus && curr->next->val->props.opgreaterthan) ||
+            (curr->val->props.assigner && curr->next->val->props.opgreaterthan) ||
+            (curr->val->props.opampersand && curr->next->val->props.opampersand) ||
+            (curr->val->props.vertline && curr->next->val->props.vertline) 
         )
         {
 
@@ -194,12 +197,17 @@ result<size_t> tokenizer::parse()
             curr->next = end->next;
         }
         else if (
-            curr->val->props.strmark && !done
+            curr->val->props.strmark
         )
         {
             // done = true;
             // std::cout << "in here\n";
-            size_t x = 0, tsize = 1;
+            // std::cout << "Currents previous: ";
+            // curr->prev->prev->val->print();
+            // std::cout << "\n";
+
+
+            size_t x = 1, tsize = 2;
             end = curr->next;
             // std::cout << "Reached here\n";
             while ((end != NULL) && !end->val->props.strmark)
@@ -210,15 +218,18 @@ result<size_t> tokenizer::parse()
             }
             // if (x == 0) x = 1;
 
-            std::cout << "Currently end is at ";
-            end->val->print();
-            std::cout << "\n";
+            // std::cout << "t, x: " << tsize << ", " << x << " Currently end is at ";
+            // end->val->print();
+            // std::cout << " Prev:";
+            // end->prev->val->print();
+            // std::cout << " Next:";
+            // end->next->val->print();
+            // std::cout << "\n";
+
 
 
             if (end == NULL)
-            {
                 return result<size_t>(253, "Unexpected EOF while looking for `\"`!");
-            }
 
             // std::cout << "Got here\n";
 
@@ -236,7 +247,7 @@ result<size_t> tokenizer::parse()
 
             buffer = new llnode<token>(new token(string(concated, buff - 1), curr->val->linenumber));
             buffer->prev = curr->prev;
-            buffer->next = end->next->next;
+            buffer->next = end->next;
             // std::cout << "Processed string literal: ";
             // buffer->val->print();
             // std::cout << "\n";
@@ -246,7 +257,7 @@ result<size_t> tokenizer::parse()
             if (end->next != NULL) end->next->prev = buffer;
 
             if (curr == this->tokens.root) this->tokens.root = buffer;
-            if (curr->next == this->tokens.end) this->tokens.end = buffer;
+            if (end->next == this->tokens.end) this->tokens.end = buffer;
 
             this->tokens.length -= x;
 
@@ -293,11 +304,15 @@ bool tokenizer::available()
 }
 
 
-
+/// @brief moves forward in the sequence until next item is not a whitespace
 void tokenizer::prestrip()
 {
     while ((this->nexttok != NULL) && this->nexttok->val->props.whitespace)
         this->nexttok = this->nexttok->next;
 }
 
-
+/// @brief resets the sequence back to the start
+void tokenizer::reset()
+{
+    this->nexttok = this->tokens.root;
+}

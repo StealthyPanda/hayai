@@ -71,6 +71,7 @@ __trait_op(binary) \
 __trait_op(logicaland) \
 __trait_op(logicalor) \
 __trait_op(notequalto) \
+__trait_op(vertline) \
 \
 \
 /*variable stuff*/\
@@ -249,6 +250,11 @@ traits gettraits(stringslice ss)
         {
             t.op = 0;
             t.identifier = 1;
+        }
+        else if (equal(ss, _vertline))
+        {
+            t.op = 0;
+            t.vertline = 1;
         }
         else if (equal(ss, _comma))
         {
