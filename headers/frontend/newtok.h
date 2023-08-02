@@ -128,6 +128,8 @@ result<size_t> tokenizer::read()
 
     this->nexttok = this->tokens.root;
 
+    this->inputfile.close();
+
     return result<size_t>(&this->tokens.length);
 }
 
@@ -139,7 +141,6 @@ result<size_t> tokenizer::parse()
 
     llnode<token> *buffer, *end;
 
-    // bool done = false;
 
     while ((curr != NULL) && (curr->next != NULL))
     {
@@ -200,38 +201,20 @@ result<size_t> tokenizer::parse()
             curr->val->props.strmark
         )
         {
-            // done = true;
-            // std::cout << "in here\n";
-            // std::cout << "Currents previous: ";
-            // curr->prev->prev->val->print();
-            // std::cout << "\n";
-
-
             size_t x = 1, tsize = 2;
             end = curr->next;
-            // std::cout << "Reached here\n";
+
             while ((end != NULL) && !end->val->props.strmark)
             {
                 tsize += end->val->tokenstr.length;
                 end = end->next;
                 x++;
             }
-            // if (x == 0) x = 1;
-
-            // std::cout << "t, x: " << tsize << ", " << x << " Currently end is at ";
-            // end->val->print();
-            // std::cout << " Prev:";
-            // end->prev->val->print();
-            // std::cout << " Next:";
-            // end->next->val->print();
-            // std::cout << "\n";
-
 
 
             if (end == NULL)
                 return result<size_t>(253, "Unexpected EOF while looking for `\"`!");
 
-            // std::cout << "Got here\n";
 
             char *concated = new char[tsize];
             char *buff = concated;
@@ -248,9 +231,6 @@ result<size_t> tokenizer::parse()
             buffer = new llnode<token>(new token(string(concated, buff - 1), curr->val->linenumber));
             buffer->prev = curr->prev;
             buffer->next = end->next;
-            // std::cout << "Processed string literal: ";
-            // buffer->val->print();
-            // std::cout << "\n";
 
 
             if (curr->prev != NULL) curr->prev->next = buffer;

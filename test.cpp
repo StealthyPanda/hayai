@@ -1,6 +1,6 @@
 #include <iostream>
-// #include "./headers/frontend/newast.h"
-#include "./headers/frontend/newtok.h"
+#include "./headers/frontend/newast.h"
+// #include "./headers/frontend/newtok.h"
 
 
 
@@ -17,52 +17,24 @@ int main()
     res = tk.read();
     _validateexit(res)
 
-    result<token> tres;
-    // while (tk.available())
-    // {
-    //     // tk.prestrip();
-    //     if (tk.available()) tres = tk.gettoken();
-    //     else break;
-    //     _validateexit(tres)
-
-    //     tres.value->print();
-    //     std::cout << "\n";
-    // }
-    // std::cout << "\n\n";
-
-
-    // std::cout << "Reached here\n";
     res = tk.parse();
     _validateexit(res)
 
+    result<astnode> noderes;
+
     // tk.prestrip();
+    // result<bool> huh = istuple(tk, tk.nexttok);
+    // _validateexit(huh)
+    // std::cout << "istuple: " << (int) *huh.value << "\n";
 
-    
-    // result<token> tres;
-    while (tk.available())
-    {
-        tk.prestrip();
-        if (tk.available()) tres = tk.gettoken();
-        else break;
-        _validateexit(tres)
+    noderes = processstatement(tk);
+    _validateexit(noderes);
 
-        tres.value->print();
-        std::cout << "\n";
-    }
+    ast dummy(filename);
+    dummy.root = noderes.value;
 
-
-
-
-    // ast tree(filename);
-    // // tree.parse();
-    // result<astnode> r = processstatement(tk);
-    // if (!r.ok)
-    // {
-    //     r.err.print();
-    //     return 69;
-    // }
-
-
+    // std::cout << "reached printbf\n";
+    dummy.printbf();
 
 
     return 0;

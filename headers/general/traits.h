@@ -15,8 +15,10 @@ __trait_op(blob) \
 __trait_op(statement) \
 __trait_op(expression) \
 __trait_op(datatype) \
+__trait_op(ftype) \
 __trait_op(identifier) \
 __trait_op(comment) \
+__trait_op(tuple) \
 \
 \
 /*statement stuff*/\
@@ -103,6 +105,8 @@ __trait_op(fcall) \
 __trait_op(functiondeclaration) \
 __trait_op(freturntype) \
 __trait_op(returner) \
+__trait_op(fins) \
+__trait_op(fouts) \
 \
 \
 /*preprocessor directives*/\

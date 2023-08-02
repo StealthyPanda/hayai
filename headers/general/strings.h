@@ -111,21 +111,23 @@ string clonestringfrom(char *start, char *end)
 /// @param s 
 void print(string *s)
 {
-    for (size_t i = 0; i < s->length; i++)
-        printf("%c", s->str[i]);
-    // if (s->nextseg != NULL) print(s->nextseg);
+    if ((s != NULL) && (s->str != NULL))
+    {
+        for (size_t i = 0; i < s->length; i++)
+            printf("%c", s->str[i]);
+    }
 }
 
 /// @brief prints the given string to stdout
 /// @param s 
 void print(string s)
 {
+    if (s.str == NULL) return;
     for (size_t i = 0; i < s.length; i++)
     {
         if (s.str[i] != '\n') printf("%c", s.str[i]);
         else printf("\\n");
     }
-    // if (s.nextseg != NULL) print(s.nextseg);
 }
 
 
