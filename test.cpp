@@ -27,7 +27,7 @@ int main()
     // _validateexit(huh)
     // std::cout << "istuple: " << (int) *huh.value << "\n";
 
-    noderes = processstatement(tk);
+    noderes = processexpression(tk);
     _validateexit(noderes);
 
     ast dummy(filename);

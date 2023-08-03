@@ -197,6 +197,44 @@ result<size_t> tokenizer::parse()
 
             curr->next = end->next;
         }
+        
+        else if (
+            curr->val->props.opdot 
+        )
+        {
+            if (
+                (curr->prev != NULL) &&
+                (curr->next != NULL) &&
+                (curr->prev->val->props.isinteger) &&
+                (curr->next->val->props.isdigits) 
+            )
+            {
+                size_t tsize = curr->prev->val->tokenstr.length +
+                               curr->next->val->tokenstr.length +
+                               curr->val->tokenstr.length;
+                
+                char *total = new char[tsize];
+                
+                for (size_t i = 0; i < curr->prev->val->tokenstr.length; i++)
+                    total[i] = curr->prev->val->tokenstr.str[i];
+
+                total[curr->prev->val->tokenstr.length] = '.';
+
+                for (size_t i = 0; i < curr->next->val->tokenstr.length; i++)
+                    total[i + curr->prev->val->tokenstr.length + 1] = curr->next->val->tokenstr.str[i];
+                
+                token *newtok = new token(string(total, tsize), curr->val->linenumber);
+                llnode<token> *newnode = new llnode<token>(newtok);
+                newnode->prev = curr->prev->prev;
+                newnode->next = curr->next->next;
+
+                if (curr->next->next != NULL) curr->next->next->prev = newnode;
+                if (curr->prev->prev != NULL) curr->prev->prev->next = newnode;
+
+                this->tokens.length -= 2;            
+            }
+        }
+        
         else if (
             curr->val->props.strmark
         )

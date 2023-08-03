@@ -7,7 +7,9 @@
 //     (str, int)
 
 // ((i8 : i16) : (i32, (byte : char)))
-let (i32, f64) (hey, hi) = "Hello World!";
+// let (i32, f64) (hey, hi) = "Hello World!";
+
+square(this(22), (3 + 2) / 2);
 
 
 // fun typea(i32 : i8 inputfunc) : str
