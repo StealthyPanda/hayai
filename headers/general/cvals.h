@@ -62,6 +62,7 @@ char *_for = (char*)"for";
 char *_let = (char*)"let";
 char *_const = (char*)"const";
 char *_ptr = (char*)"ptr";
+char *_break = (char*)"break";
 
 char *_stl = (char*)
 "#define ui8 unsigned char\n"

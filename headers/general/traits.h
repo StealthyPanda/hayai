@@ -94,7 +94,7 @@ __trait_op(brace) \
 __trait_op(function) \
 __trait_op(functiondeclarator) \
 __trait_op(body) \
-__trait_op(argument) \
+__trait_op(arguments) \
 __trait_op(clone) \
 __trait_op(inlinedef) \
 __trait_op(rkeyword) \
@@ -107,6 +107,7 @@ __trait_op(freturntype) \
 __trait_op(returner) \
 __trait_op(fins) \
 __trait_op(fouts) \
+__trait_op(fparams) \
 \
 \
 /*preprocessor directives*/\
@@ -125,6 +126,8 @@ __trait_op(ifblock)\
 __trait_op(elifblock)\
 __trait_op(elseblock)\
 __trait_op(whileblock)\
+__trait_op(breakkeyword)\
+__trait_op(breakstatement)\
 __trait_op(forblock)
 
 
@@ -476,6 +479,10 @@ traits gettraits(stringslice ss)
         {
             t.vardeclarator = 1;
             t.constdeclarator = 1;
+        }
+        else if (equal(ss, _break))
+        {
+            t.breakkeyword = 1;
         }
         else if (isdigitsonly(ss))
         {

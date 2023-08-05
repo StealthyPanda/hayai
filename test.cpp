@@ -27,14 +27,17 @@ int main()
     // _validateexit(huh)
     // std::cout << "istuple: " << (int) *huh.value << "\n";
 
-    noderes = processexpression(tk);
-    _validateexit(noderes);
+    // for (size_t i = 0; i < 3; i++)
+    {
+        noderes = processstatement(tk);
+        _validateexit(noderes);
 
-    ast dummy(filename);
-    dummy.root = noderes.value;
+        ast dummy(filename);
+        dummy.root = noderes.value;
 
-    // std::cout << "reached printbf\n";
-    dummy.printbf();
+        // std::cout << "reached printbf\n";
+        dummy.printbf();
+    }
 
 
     return 0;

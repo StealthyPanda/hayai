@@ -9,6 +9,10 @@
 const bool truebool = true;
 const bool falsebool = false;
 
+
+
+
+
 /// @brief node that stores a token in the AST.
 class astnode
 {
@@ -24,6 +28,22 @@ public:
 
     void print();
 };
+
+
+result<astnode> processstatement(tokenizer &tk);
+result<astnode> processexpression(tokenizer &tk);
+result<astnode> processfcall(tokenizer &tk);
+result<astnode> processfuncdef(tokenizer &tk);
+result<astnode> processrval(tokenizer &tk);
+result<astnode> processscope(tokenizer &tk);
+result<astnode> processcflow(tokenizer &tk);
+result<astnode> processtype(tokenizer &tk);
+result<astnode> processtuple(tokenizer &tk);
+result<astnode> processscope(tokenizer &tk);
+
+result<bool> istuple(tokenizer &tk, llnode<token> *start);
+result<bool> isftype(tokenizer &tk, llnode<token> *start);
+//TODO: add an isinlinefuncdef checking function
 
 astnode::astnode()
 {
@@ -53,19 +73,7 @@ void astnode::print()
     std::cout << ")(" << this->children.length <<  ")";
 }
 
-result<astnode> processstatement(tokenizer &tk);
-result<astnode> processexpression(tokenizer &tk);
-result<astnode> processfcall(tokenizer &tk);
-result<astnode> processfuncdef(tokenizer &tk) {}
-result<astnode> processrval(tokenizer &tk) {
-    astnode *huh = new astnode;
-    huh->tokentraits.rvalue = 1;
-    return result<astnode>(huh);
-}
-result<astnode> processscope(tokenizer &tk);
-result<astnode> processcflow(tokenizer &tk);
-result<astnode> processtype(tokenizer &tk);
-result<astnode> processtuple(tokenizer &tk);
+
 
 string getlineat(tokenizer &tk, size_t ln)
 {
@@ -115,6 +123,7 @@ ast::ast(char *filepath)
     this->root = new astnode();
     this->root->tokentraits.translationunit = 1;
 }
+
 
 /// @brief parses the given file, and generates an AST for the translation unit
 result<void> ast::parse()
@@ -284,44 +293,6 @@ result<astnode> processtuple(tokenizer &tk)
     ll<astnode> items;
 
     size_t nrb = 0;
-    // while (true)
-    // {
-    //     tk.prestrip();
-    //     tokres = tk.gettoken();
-    //     _validatecast(tokres, astnode)
-
-    //     if (tokres.value->props.roundbracket)
-    //     {
-    //         if (tokres.value->props.right)
-    //         {
-    //             if (nrb == 0) break;
-    //         }
-    //         else
-    //         {
-    //             tk.nexttok = tk.nexttok->prev;
-
-    //             bres = istuple(tk, tk.nexttok);
-    //             _validatecast(bres, astnode)
-
-    //             if (*bres.value) noderes = processtuple(tk);
-    //             else
-    //             {
-    //                 bres = isftype(tk, tk.nexttok);
-    //                 _validatecast(bres, astnode)
-
-    //                 if (*bres.value)
-    //                     noderes = processftype(tk);
-    //                 else
-    //                     noderes = processexpression(tk);
-    //             }
-    //             _validate(noderes)
-
-    //             items.postpend(noderes.value);
-    //         }
-    //     }
-    //     else if (!tokres.value->props.commasep)
-    //         items.postpend(new astnode(tokres.value));
-    // }
 
     while (true)
     {
@@ -338,9 +309,23 @@ result<astnode> processtuple(tokenizer &tk)
         if (tokres.value->props.commasep) {}
         else if (tokres.value->props.roundbracket && tokres.value->props.right)
             break;
+        else
+        {
+            dstring emsg;
+
+            emsg.append("\n");
+            emsg.append(getlineat(tk, tokres.value->linenumber));
+            emsg.append("\n\nExpecting `,` or `)`; got `");
+            emsg.append(tokres.value->tokenstr);
+            emsg.append("` while processing tuple!");
+
+            return result<astnode>(253, emsg.getstring());
+        }
     }
 
-
+    // std::cout << "Tuple end: ";
+    // tk.nexttok->val->print();
+    // std::cout << "\n";
 
     astnode *tuplenode = new astnode;
     tuplenode->children = items;
@@ -582,7 +567,6 @@ result<astnode> processftype(tokenizer &tk)
 }
 
 
-
 /// @brief processes any type
 result<astnode> processtype(tokenizer &tk)
 {
@@ -677,9 +661,68 @@ result<astnode> processstatement(tokenizer &tk)
         currtoken = tokres.value;
     }
 
+    // std::cout << "At the start of statement procsr: ";
+    // currtoken->print();
+    // std::cout << "\n";
+
     astnode *var = NULL, *type = NULL, *rval = NULL;
     astnode *statementnode = new astnode;
     statementnode->tokentraits.statement = 1;
+
+
+    if (currtoken->props.rkeyword)
+    {
+        tk.gettoken();
+        noderes = processrval(tk);
+        _validate(noderes)
+
+        statementnode->tokentraits.returner = 1;
+        noderes.value->parent = statementnode;
+        statementnode->children.postpend(noderes.value);
+
+        tk.prestrip();
+        tokres = tk.gettoken();
+        _validatecast(tokres, astnode)
+
+        if (!tokres.value->props.statementterminator)
+        {
+            dstring emsg;
+
+            emsg.append("\n");
+            emsg.append(getlineat(tk, tokres.value->linenumber));
+            emsg.append("\n\nExpecting `;`, got `");
+            emsg.append(tokres.value->tokenstr);
+            emsg.append("` instead!");
+
+            return result<astnode>(252, emsg.getstring());
+        }
+    
+        return result<astnode>(statementnode);
+    }
+
+    if (currtoken->props.breakkeyword)
+    {
+        tk.gettoken();
+        tk.prestrip();
+        tokres = tk.gettoken();
+        _validatecast(tokres, astnode)
+
+        if (!tokres.value->props.statementterminator)
+        {
+            dstring emsg;
+
+            emsg.append("\n");
+            emsg.append(getlineat(tk, tokres.value->linenumber));
+            emsg.append("\n\nExpecting `;` after `break`, got `");
+            emsg.append(tokres.value->tokenstr);
+            emsg.append("` instead!");
+
+            return result<astnode>(252, emsg.getstring());
+        }
+    
+        statementnode->tokentraits.breakstatement = 1;
+        return result<astnode>(statementnode);
+    }
 
     // dealing with variable declaration stuff
     if (currtoken->props.vardeclarator)
@@ -737,36 +780,89 @@ result<astnode> processstatement(tokenizer &tk)
             var->tokentraits.datatype = 0;
             type = NULL;
         }
+
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        if (!(
+            tokres.value->props.statementterminator ||
+            tokres.value->props.assigner
+        ))
+        {
+            dstring emsg;
+
+            emsg.append("\n");
+            emsg.append(getlineat(tk, tokres.value->linenumber));
+            emsg.append("\n\nExpected `;` or assigner; got `");
+            emsg.append(tokres.value->tokenstr);
+            emsg.append("` instead!");
+
+            return result<astnode>(253, emsg.getstring());
+        }
     }
 
     if (var == NULL)
     {
         var = type;
         type = NULL;
-        var->tokentraits.datatype = 0;
+        if (var != NULL) var->tokentraits.datatype = 0;
     }
     
     tk.prestrip();
-    tokres = tk.gettoken();
+    tokres = tk.peek();
     _validatecast(tokres, astnode)
 
-    std::cout << "At this point: ";
-    tokres.value->print();
-    std::cout << "\n";
 
     if (tokres.value->props.assigner)
+    {
         statementnode->tokentraits.varassign = 1;
+        tk.gettoken();
+    }
 
-    /*
-        TODO: 
-        implement rvalue stuff here
-        placeholder stuff for now
-    */
+    
+    
+    if (statementnode->tokentraits.varassign || !statementnode->tokentraits.vardeclaration)
+    {
+        // std::cout << "finding rval...\n";
+        noderes = processrval(tk);
+        _validate(noderes)
 
-    noderes = processrval(tk);
-    _validate(noderes)
+        rval = noderes.value;
+    }
 
-    rval = noderes.value;
+
+    tk.prestrip();
+    tokres = tk.peek();
+    _validatecast(tokres, astnode)
+
+    // std::cout << "At this point: ";
+    // tk.nexttok->val->print();
+    // std::cout << "\n";
+
+    if (!tokres.value->props.statementterminator)
+    {
+        if ((rval != NULL) && tokres.value->props.brace && tokres.value->props.right)
+        {
+            std::cout << "Triggered\n";
+            return result<astnode>(rval);
+        }
+        else
+        {
+            dstring emsg;
+
+            emsg.append("\n");
+            emsg.append(getlineat(tk, tokres.value->linenumber));
+            emsg.append("\n\nExpecting `;` or an expression at end of scope; got `");
+            emsg.append(tokres.value->tokenstr);
+            emsg.append("`!");
+
+            return result<astnode>(252, emsg.getstring());
+        }
+    }
+    else
+        tk.gettoken();
+
 
 
     if (type != NULL)
@@ -789,7 +885,7 @@ result<astnode> processstatement(tokenizer &tk)
 }
 
 
-/// @brief processes an expression
+/// @brief processes an expression (and also tuples)
 result<astnode> processexpression(tokenizer &tk)
 {
     tk.prestrip();
@@ -934,6 +1030,12 @@ result<astnode> processexpression(tokenizer &tk)
                 noderes.value->parent = current;
                 current->children.postpend(noderes.value);
             }
+            else
+            {
+                buffer = new astnode(tokres.value);
+                buffer->parent = current;
+                current->children.postpend(buffer);
+            }
         }
 
         else
@@ -949,17 +1051,17 @@ result<astnode> processexpression(tokenizer &tk)
         _validatecast(tokres, astnode)
     }
 
-    if ((tk.nexttok != NULL) && !(tk.nexttok->val->props.roundbracket && tk.nexttok->val->props.right))
+    if ((tk.nexttok != NULL) && !(tk.nexttok->val->props.roundbracket && tk.nexttok->val->props.right && (nrb != 0)))
         tk.nexttok = tk.nexttok->prev;
     // if ((tk.nexttok != NULL) && tk.nexttok->val->props.roundbracket) tk.nexttok = tk.nexttok->next;
 
 
-    if (tk.nexttok != NULL)
-    {
-        std::cout << "At the end of expression processing: ";
-        tk.nexttok->val->print();
-        std::cout << "\n";
-    }
+    // if (tk.nexttok != NULL)
+    // {
+    //     std::cout << "At the end of expression processing: ";
+    //     tk.nexttok->val->print();
+    //     std::cout << "\n";
+    // }
 
     return result<astnode>(expressionnode);
 }
@@ -975,6 +1077,7 @@ result<astnode> processfcall(tokenizer &tk)
     
     result<token> tokres;
     result<astnode> noderes;
+    result<bool> bres;
 
     tk.prestrip();
     tokres = tk.gettoken();
@@ -996,16 +1099,491 @@ result<astnode> processfcall(tokenizer &tk)
     fcallnode->tokentraits.fcall = 1;
 
     tk.prestrip();
-    noderes = processtuple(tk);
+    // std::cout << "Before istuple: ";
+    // tk.nexttok->val->print();
+    // std::cout << "\n";
+    bres = istuple(tk, tk.nexttok);
+    _validatecast(bres, astnode)
+
+    tk.prestrip();
+    // std::cout << "istuple for ";
+    // id->print();
+    // std::cout << ": " << (int)(*bres.value) << "\n";
+    if (*bres.value)
+        noderes = processtuple(tk);
+    else
+        noderes = processexpression(tk);
     _validate(noderes)
+
+    // std::cout << "\tInside fcall after consumption for ";
+    // id->print();
+    // std::cout << ": ";
+    // tk.nexttok->val->print();
+    // std::cout << "\n";
 
     id->parent = fcallnode;
     noderes.value->parent = fcallnode;
+    noderes.value->tokentraits.tuple = 0;
+    noderes.value->tokentraits.arguments = 1;
+    noderes.value->tokentraits.expression = 0;
 
     fcallnode->children.postpend(id)->postpend(noderes.value);
+    fcallnode->tokentraits.expression = 1;
 
     return result<astnode>(fcallnode);
 }
+
+
+/// @brief processes an rvalue 
+result<astnode> processrval(tokenizer &tk)
+{
+    tk.prestrip();
+
+    if (!tk.available())
+        return result<astnode>(254, "Unexpected EOF while processing expression!");
+    
+    result<token> tokres;
+    result<astnode> noderes;
+    result<bool> bres;
+
+    tokres = tk.peek();
+    _validatecast(tokres, astnode)
+
+    if (tokres.value->props.cflowkeyword)
+        noderes = processcflow(tk);
+    else if (tokres.value->props.functiondeclarator)
+        noderes = processfuncdef(tk);
+    else
+        noderes = processexpression(tk);
+    _validate(noderes)
+
+    // std::cout << "nchildren: " << noderes.value->children.length << "\n";
+
+    noderes.value->tokentraits.rvalue = 1;
+    return result<astnode>(noderes.value);
+}
+
+/// @brief processes control flow blocks 
+result<astnode> processcflow(tokenizer &tk)
+{
+    tk.prestrip();
+
+    if (!tk.available())
+        return result<astnode>(254, "Unexpected EOF while processing expression!");
+    
+    result<token> tokres;
+    result<astnode> noderes;
+    result<bool> bres;
+
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.cflowkeyword)
+    {
+        dstring emsg;
+
+        emsg.append("\n");
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected control flow keyword, got `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("`!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+
+    astnode *blocknode = new astnode, *buffer = NULL;
+    blocknode->tokentraits.controlflow = 1;
+
+    if (tokres.value->props.ifkeyword)
+    {
+        blocknode->tokentraits.ifblock = 1;
+        noderes = processexpression(tk);
+        _validate(noderes)
+
+        noderes.value->parent = blocknode;
+        blocknode->children.postpend(noderes.value);
+
+        noderes = processscope(tk);
+        _validate(noderes)
+
+        noderes.value->parent = blocknode;
+        blocknode->children.postpend(noderes.value);
+
+        tk.prestrip();
+        if (!tk.available())
+            return result<astnode>(blocknode);
+
+
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        // std::cout << "pekkers: ";
+        // tokres.value->print();
+        // std::cout << "\n";
+
+        while (tokres.value->props.elifkeyword)
+        {
+            tk.gettoken();
+
+            buffer = new astnode;
+            buffer->tokentraits.controlflow = 1;
+            buffer->tokentraits.elifblock = 1;
+
+            noderes = processexpression(tk);
+            _validate(noderes)
+
+            noderes.value->parent = buffer;
+            buffer->children.postpend(noderes.value);
+
+            noderes = processscope(tk);
+            _validate(noderes)
+
+            noderes.value->parent = buffer;
+            buffer->children.postpend(noderes.value);
+
+            buffer->parent = blocknode;
+            blocknode->children.postpend(buffer);
+
+            tk.prestrip();
+            if (!tk.available())
+                return result<astnode>(blocknode);
+
+            tokres = tk.peek();
+            _validatecast(tokres, astnode)
+        }
+
+        tk.prestrip();
+        if (!tk.available())
+            return result<astnode>(blocknode);
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        if (tokres.value->props.elsekeyword)
+        {
+            tk.gettoken();
+
+            tk.prestrip();
+            noderes = processscope(tk);
+            _validate(noderes)
+
+            buffer = new astnode;
+            buffer->tokentraits.controlflow = 1;
+            buffer->tokentraits.elseblock = 1;
+
+            noderes.value->parent = buffer;
+            buffer->children.postpend(noderes.value);
+
+            buffer->parent = blocknode;
+            blocknode->children.postpend(buffer);
+
+            return result<astnode>(blocknode);
+        }
+
+    }
+
+
+    else if (tokres.value->props.whilekeyword)
+    {
+        blocknode->tokentraits.whileblock = 1;
+        noderes = processexpression(tk);
+        _validate(noderes)
+
+        noderes.value->parent = blocknode;
+        blocknode->children.postpend(noderes.value);
+
+        noderes = processscope(tk);
+        _validate(noderes)
+
+        noderes.value->parent = blocknode;
+        blocknode->children.postpend(noderes.value);
+    }
+
+
+    return result<astnode>(blocknode);
+}
+
+/// @brief processes control flow blocks 
+result<astnode> processscope(tokenizer &tk)
+{
+    tk.prestrip();
+
+    if (!tk.available())
+        return result<astnode>(254, "Unexpected EOF while processing expression!");
+    
+    result<token> tokres;
+    result<astnode> noderes;
+    result<bool> bres;
+
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!(tokres.value->props.brace && tokres.value->props.left))
+    {
+        dstring emsg;
+
+        emsg.append("\n");
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected `{` while processing scope, got `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("`!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+
+    astnode *scopeblock = new astnode;
+    scopeblock->tokentraits.body = 1;
+
+    while (true)
+    {
+        tk.prestrip();
+        tokres = tk.peek();
+        // std::cout << "Right now at: ";
+        // tokres.value->print();
+        // std::cout << "\n";
+        _validatecast(tokres, astnode)
+        
+        if ((tokres.value->props.brace && tokres.value->props.right))
+            break;
+
+        if (tokres.value->props.cflowkeyword)
+        {
+            noderes = processcflow(tk);
+            _validate(noderes)
+            noderes.value->parent = scopeblock;
+            scopeblock->children.postpend(noderes.value);
+        }
+
+        else if ((tokres.value->props.brace && tokres.value->props.left))
+        {
+            noderes = processscope(tk);
+            _validate(noderes)
+            noderes.value->parent = scopeblock;
+            scopeblock->children.postpend(noderes.value);
+        }
+        
+        else
+        {
+            noderes = processstatement(tk);
+            _validate(noderes)
+            noderes.value->parent = scopeblock;
+            scopeblock->children.postpend(noderes.value);
+        }
+    }
+    tk.gettoken();
+
+    return result<astnode>(scopeblock);
+}
+
+
+/// @brief processes all types of function definitions, except inline
+result<astnode> processfuncdef(tokenizer &tk)
+{
+    tk.prestrip();
+
+    if (!tk.available())
+        return result<astnode>(254, "Unexpected EOF while processing expression!");
+    
+    result<token> tokres;
+    result<astnode> noderes;
+    result<bool> bres;
+
+    tk.prestrip();
+    tokres = tk.peek();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.functiondeclarator)
+    {
+        dstring emsg;
+
+        emsg.append("\n");
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected `fun` while processing funcdef, got `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("`!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+    else
+        tk.gettoken();
+
+    astnode *funcdef = new astnode, *buffer = NULL, *paramsnode = new astnode;
+    funcdef->tokentraits.functiondeclaration = 1;
+
+
+    tk.prestrip();
+    tokres = tk.peek();
+    _validatecast(tokres, astnode)
+
+    if (tokres.value->props.identifier)
+    {
+        tk.gettoken();
+        buffer = new astnode(tokres.value);
+        buffer->parent = funcdef;
+        funcdef->children.postpend(buffer);
+    }
+
+    ll<astnode> params;
+
+    tk.prestrip();
+    tokres = tk.peek();
+    _validatecast(tokres, astnode)
+
+    if (!(tokres.value->props.left && tokres.value->props.roundbracket))
+    {
+        dstring emsg;
+
+        emsg.append("\n");
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected list of params while processing funcdef, got `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("`!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+    else
+        tk.gettoken();
+
+
+    // std::cout << "Gothere\n";
+
+    while (!(tokres.value->props.right && tokres.value->props.roundbracket))
+    {
+        buffer = new astnode;
+        buffer->tokentraits.param = 1;
+        
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        if (tokres.value->props.clonekeyword)
+        {
+            tk.gettoken();
+            buffer->tokentraits.clone = 1;
+        }
+        else if (tokres.value->props.roundbracket && tokres.value->props.right)
+        {
+            tk.gettoken();
+            break;
+        }
+
+        noderes = processtype(tk);
+        _validate(noderes)
+
+        noderes.value->parent = buffer;
+        buffer->children.postpend(noderes.value);
+
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        if (tokres.value->props.clonekeyword)
+        {
+            tk.gettoken();
+            buffer->tokentraits.clone = 1;
+        }
+
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+        
+        if (tokres.value->props.identifier)
+        {
+            tk.gettoken();
+            astnode *holder = new astnode(tokres.value);
+            holder->parent = buffer;
+            buffer->children.postpend(holder);
+        }
+        else
+        {
+            dstring emsg;
+
+            emsg.append("\n");
+            emsg.append(getlineat(tk, tokres.value->linenumber));
+            emsg.append("\n\nUnnamed parameter in func params!");
+            // emsg.append("` in func params!");
+
+            return result<astnode>(253, emsg.getstring());
+        }
+
+
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        if (tokres.value->props.clonekeyword)
+        {
+            tk.gettoken();
+            buffer->tokentraits.clone = 1;
+        }
+
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        if (tokres.value->props.commasep)
+            tk.gettoken();
+        else if (tokres.value->props.roundbracket && tokres.value->props.right)
+        {
+            tk.gettoken();
+            buffer->parent = paramsnode;
+            paramsnode->children.postpend(buffer);
+            break;
+        }
+        else
+        {
+            dstring emsg;
+
+            emsg.append("\n");
+            emsg.append(getlineat(tk, tokres.value->linenumber));
+            emsg.append("\n\nUnexpected token `");
+            emsg.append(tokres.value->tokenstr);
+            emsg.append("` in func params!");
+
+            return result<astnode>(253, emsg.getstring());
+        }
+
+
+        buffer->parent = paramsnode;
+        paramsnode->children.postpend(buffer);
+    }
+
+    
+    tk.prestrip();
+    tokres = tk.peek();
+    _validatecast(tokres, astnode)
+
+    if (tokres.value->props.colon)
+    {
+        tk.gettoken();
+        noderes = processtype(tk);
+        _validate(noderes)
+
+        noderes.value->parent = funcdef;
+        noderes.value->tokentraits.freturntype = 1;
+        funcdef->children.postpend(noderes.value);
+    }
+    
+    
+    paramsnode->tokentraits.fparams = 1;
+    paramsnode->parent = funcdef;
+    funcdef->children.postpend(paramsnode);
+
+
+    noderes = processscope(tk);
+    _validate(noderes)
+
+    noderes.value->parent = funcdef;
+    funcdef->children.postpend(noderes.value);
+
+    return result<astnode>(funcdef);
+}
+
+
+
+
+
 
 
 
