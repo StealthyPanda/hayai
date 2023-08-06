@@ -194,7 +194,11 @@ traits gettraits(stringslice ss)
             t.unary = 1;
             t.boolop = 1;
         }
-        else if (equal(ss, _at)) t.opat = 1;
+        else if (equal(ss, _at))
+        {
+            t.opat = 1;
+            t.unary = 1;
+        }
         else if (equal(ss, _dollar)) t.opdollar = 1;
         else if (equal(ss, _percent))
         {
@@ -206,7 +210,11 @@ traits gettraits(stringslice ss)
             t.opcarat = 1;
             t.binary = 1;
         }
-        else if (equal(ss, _ampersand)) t.opampersand = 1;
+        else if (equal(ss, _ampersand))
+        {
+            t.opampersand = 1;
+            t.unary = 1;
+        }
         else if (equal(ss, _star))
         {
             t.opstar = 1;

@@ -40,10 +40,14 @@ result<astnode> processcflow(tokenizer &tk);
 result<astnode> processtype(tokenizer &tk);
 result<astnode> processtuple(tokenizer &tk);
 result<astnode> processscope(tokenizer &tk);
+// result<astnode> processscope(tokenizer &tk);
 
 result<bool> istuple(tokenizer &tk, llnode<token> *start);
 result<bool> isftype(tokenizer &tk, llnode<token> *start);
 //TODO: add an isinlinefuncdef checking function
+
+
+
 
 astnode::astnode()
 {
@@ -730,6 +734,8 @@ result<astnode> processstatement(tokenizer &tk)
         tk.gettoken();
 
         statementnode->tokentraits.vardeclaration = 1;
+        if (currtoken->props.constdeclarator)
+            statementnode->tokentraits.isconst = 1;
 
         noderes = processtype(tk);
         _validate(noderes)
@@ -813,11 +819,52 @@ result<astnode> processstatement(tokenizer &tk)
     tokres = tk.peek();
     _validatecast(tokres, astnode)
 
-
-    if (tokres.value->props.assigner)
+    
+    llnode<token> *cursor = tk.nexttok;
+    while (cursor != NULL)
     {
-        statementnode->tokentraits.varassign = 1;
-        tk.gettoken();
+        if (cursor->val->props.assigner)
+            statementnode->tokentraits.varassign = 1;
+        
+        if (
+            cursor->val->props.statementterminator ||
+            cursor->val->props.assigner ||
+            cursor->val->props.brace
+            // cursor->val->props.roundbracket 
+        )
+            break;
+        
+        cursor = cursor->next;
+    }
+    
+
+
+    if (statementnode->tokentraits.varassign)
+    {
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        if (!tokres.value->props.assigner)
+        {
+            // std::cout << "gothere\n";
+            noderes = processrval(tk);
+            _validate(noderes)
+
+            var = noderes.value;
+            var->tokentraits.expression = 0;
+            var->tokentraits.rvalue = 0;
+            
+            if ((var->children.length == 1) && !var->tokentraits.tuple)
+                var = var->children.root->val;
+        }
+
+        tk.prestrip();
+        tokres = tk.gettoken();
+        _validatecast(tokres, astnode)
+
+        if (!tokres.value->props.assigner)
+            return result<astnode>(250, "Something went wrong in processing statement...");
     }
 
     
@@ -825,6 +872,9 @@ result<astnode> processstatement(tokenizer &tk)
     if (statementnode->tokentraits.varassign || !statementnode->tokentraits.vardeclaration)
     {
         // std::cout << "finding rval...\n";
+        // std::cout << "here: ";
+        // tk.nexttok->val->print();
+        // std::cout << "\n";
         noderes = processrval(tk);
         _validate(noderes)
 
@@ -919,6 +969,7 @@ result<astnode> processexpression(tokenizer &tk)
     while (!(
         // (!tk.available()) ||
         (tokres.value->props.brace) ||
+        (tokres.value->props.assigner) ||
         (tokres.value->props.right && tokres.value->props.squarebracket) ||
         (tokres.value->props.commasep) ||
         (tokres.value->props.right && tokres.value->props.roundbracket && (nrb == 0)) ||
@@ -946,9 +997,12 @@ result<astnode> processexpression(tokenizer &tk)
         {
             buffer = new astnode(tokres.value);
             
-            holder = current->children.postpop();
-            holder->parent = buffer;
-            buffer->children.postpend(holder);
+            if (buffer->tokentraits.binary)
+            {
+                holder = current->children.postpop();
+                if (holder != NULL) holder->parent = buffer;
+                buffer->children.postpend(holder);
+            }
 
             buffer->parent = current;
             current->children.postpend(buffer);
@@ -1022,7 +1076,6 @@ result<astnode> processexpression(tokenizer &tk)
 
             if (peeker.value->props.roundbracket && peeker.value->props.left)
             {
-                //this is an fcall
                 tk.nexttok = tk.nexttok->prev;
                 noderes = processfcall(tk);
                 _validate(noderes)
@@ -1094,7 +1147,12 @@ result<astnode> processfcall(tokenizer &tk)
 
         return result<astnode>(253, emsg.getstring());
     }
-
+    else
+    {
+        // std::cout << "\tProcessing fcall for: ";
+        // tokres.value->print();
+        // std::cout << "\n";
+    }
     astnode *id = new astnode(tokres.value), *fcallnode = new astnode;
     fcallnode->tokentraits.fcall = 1;
 
@@ -1112,7 +1170,13 @@ result<astnode> processfcall(tokenizer &tk)
     if (*bres.value)
         noderes = processtuple(tk);
     else
+    {
+        tk.gettoken();
+        // std::cout << "\tSending to process expression with: ";
+        // tk.nexttok->val->print();
+        // std::cout << "\n";
         noderes = processexpression(tk);
+    }
     _validate(noderes)
 
     // std::cout << "\tInside fcall after consumption for ";
@@ -1129,6 +1193,12 @@ result<astnode> processfcall(tokenizer &tk)
 
     fcallnode->children.postpend(id)->postpend(noderes.value);
     fcallnode->tokentraits.expression = 1;
+
+    if (!(*bres.value)) tk.gettoken();
+    // std::cout << "\tAt the end of fcall: ";
+    // tk.nexttok->val->print();
+    // std::cout << "\n";
+
 
     return result<astnode>(fcallnode);
 }

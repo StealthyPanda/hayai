@@ -26,7 +26,7 @@ ptr thiswontwork2 = 69 - 0; //Big NO NO
 ptr thiswontwork3 = null; //Big NO NO
 
 // axiom 2: pointer arithmetic is allowed, provided assignment rules as decribed
-// above are allowed. (And ofc the pointer types match and everything)
+// above are followed. (And ofc the pointer types match and everything)
 
 onemore += 1; //OK
 onemore += 100000; //OK
@@ -84,10 +84,10 @@ somepointer = 69;
 //you get the point, you can do anything with them.
 //the only restriction is that an unsafe pointer can be dereferenced only in an unsafe block:
 
-*somepointer = 3.14; //invalid, will lead to error;
+somepointer[] = 3.14; //invalid, will lead to error;
 
 unsafe {
-	*somepointer = 3.14; //this is ok
+	somepointer[] = 3.14; //this is ok
 }
 
 //this makes all unsafe pointers at least easily debuggable.
@@ -106,3 +106,28 @@ ptr[1] f32[1] bruh = &rad;
 
 //to declare arrays of dimensions N with sizes x1, x2, ... xN along each of those dimensions:
 ptr[N] datatype[x1][x2][x3]...[xN] name;
+
+
+//-------------------------------------
+// pointer dereferencing stuff
+//-------------------------------------
+
+// for any pointer p,
+
+p[i][j][k] // is the derefencing syntax; exactly like arrays in C.
+
+//eg:
+let humanage = 69;
+ptr hp = &humanage;
+
+hp[0] = 420; //OK
+hp[1] = 420; //syntactically OK, but the internal checks make this just not do anything.
+hp[] = 420; //empty [] === [0].
+
+
+ptr f32[5][3] matrix(0); //init arr with value 0
+
+matrix[1][] = 1; // === matrix[1][0] = 1;
+
+ptr row2 = matrix[1]; // === ptr[1] f32[3] row2 = matrix[1]; [1 0 0]
+

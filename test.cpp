@@ -29,7 +29,7 @@ int main()
 
     // for (size_t i = 0; i < 3; i++)
     {
-        noderes = processstatement(tk);
+        noderes = processexpression(tk);
         _validateexit(noderes);
 
         ast dummy(filename);
