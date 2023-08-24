@@ -13,10 +13,6 @@ ptr f32 pip;
 
 
 ptr pip = &pi + 3;
-struct smartptr {
-	void *start = 0x50, *end = 0x54, *value = 0x50;
-}
-
 
 
 ptr pip; //NOT ok

@@ -8,7 +8,7 @@ int main()
 {
     std::cout << "Hajimemashite\n";
 
-    char* filename = "./syntaxstuff.hy";
+    char* filename = "./playground.hy";
 
     
     tokenizer tk(filename);
@@ -29,7 +29,8 @@ int main()
 
     // for (size_t i = 0; i < 3; i++)
     {
-        noderes = processexpression(tk);
+        // noderes = processstatement(tk);
+        noderes = processpointer(tk);
         _validateexit(noderes);
 
         ast dummy(filename);

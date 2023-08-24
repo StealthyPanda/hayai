@@ -71,7 +71,8 @@ X _placeholder;
 somepointer == null; // null is equivalent to &_placeholder.
 
 //-------------------------------------------------------------
-// these axioms ensure a normal pointer is always valid.
+// these axioms ensure a normal pointer is always valid
+// (and so can be derefernced safely always).
 //-------------------------------------------------------------
 
 
@@ -107,6 +108,7 @@ ptr[1] f32[1] bruh = &rad;
 //to declare arrays of dimensions N with sizes x1, x2, ... xN along each of those dimensions:
 ptr[N] datatype[x1][x2][x3]...[xN] name;
 
+// multidim pointers can just be cast down to void*, so its fine.
 
 //-------------------------------------
 // pointer dereferencing stuff
@@ -130,4 +132,21 @@ ptr f32[5][3] matrix(0); //init arr with value 0
 matrix[1][] = 1; // === matrix[1][0] = 1;
 
 ptr row2 = matrix[1]; // === ptr[1] f32[3] row2 = matrix[1]; [1 0 0]
+
+
+//syntax to for pointers params
+//just use ptr keyword anywhere, datatype is optional
+fun getfirstelementsquared(ptr numeric arr) {
+	if len(arr) > 0 { arr[0] * arr[0] }
+	else { 0 }
+}
+
+fun serialize(ptr start)
+{
+	ptr cursor = start as byte ptr;
+	while cursor < start.end {
+		*do something with cursor[0]*
+	}
+}
+
 

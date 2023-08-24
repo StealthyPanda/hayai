@@ -38,6 +38,7 @@ __trait_op(commasep) \
 __trait_op(call) \
 __trait_op(param) \
 __trait_op(stringliteral) \
+__trait_op(index) \
 \
 \
 /*operator stuff*/\
@@ -78,7 +79,6 @@ __trait_op(vertline) \
 \
 /*variable stuff*/\
 __trait_op(vardeclarator) \
-__trait_op(ptrdeclarator) \
 __trait_op(ismutable) \
 __trait_op(isconst) \
 __trait_op(constdeclarator) \
@@ -114,6 +114,16 @@ __trait_op(fparams) \
 __trait_op(hash) \
 \
 \
+/*pointer stuff*/\
+__trait_op(ptrdeclarator) \
+__trait_op(ptrdeclaration) \
+__trait_op(ptrassign) \
+__trait_op(ptrdim) \
+__trait_op(ptrsize) \
+__trait_op(fillvalue) \
+\
+\
+\
 /*Control flow*/\
 __trait_op(controlflow)\
 __trait_op(cflowkeyword)\
@@ -129,6 +139,8 @@ __trait_op(whileblock)\
 __trait_op(breakkeyword)\
 __trait_op(breakstatement)\
 __trait_op(forblock)
+
+
 
 
 
@@ -524,3 +536,17 @@ traits unionof(traits &t1, traits &t2)
 }
 
 #undef __trait_op
+
+
+#define __trait_op(name) (t1.name == t2.name) &&
+
+bool operator==(traits &t1, traits &t2)
+{
+    return (
+        __traits_list
+        true
+    );
+}
+
+#undef __traits_op
+
