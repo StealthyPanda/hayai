@@ -29,8 +29,8 @@ int main()
 
     // for (size_t i = 0; i < 3; i++)
     {
-        // noderes = processstatement(tk);
-        noderes = processpointer(tk);
+        noderes = processfuncdef(tk);
+        // noderes = processparam(tk);
         _validateexit(noderes);
 
         ast dummy(filename);

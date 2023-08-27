@@ -115,6 +115,7 @@ __trait_op(hash) \
 \
 \
 /*pointer stuff*/\
+__trait_op(pointer) \
 __trait_op(ptrdeclarator) \
 __trait_op(ptrdeclaration) \
 __trait_op(ptrassign) \

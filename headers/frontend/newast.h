@@ -182,6 +182,8 @@ result<void> ast::parse()
 }
 
 
+result<bool> isftype(tokenizer &tk, llnode<token> *start);
+
 
 /// @brief Checks if the roundbracket pair represents a tuple. 
 /// DOES NOT ADVANCE the token sequence.
@@ -199,6 +201,16 @@ result<bool> istuple(tokenizer &tk, llnode<token> *start)
         return result<bool>(253, emsg.getstring());
     }
 
+    result<bool> bres;
+    // llnode<token> *os = start;
+
+    bres = isftype(tk, start);
+    _validate(bres)
+
+    if (*bres.value)
+        return result<bool>((bool*) &falsebool);
+
+
     start = start->next;
     size_t nrb = 0;
     while (true)
@@ -211,12 +223,19 @@ result<bool> istuple(tokenizer &tk, llnode<token> *start)
         
         else if (start->val->props.roundbracket && start->val->props.right)
         {
-            if (!nrb) return result<bool>((bool*) &falsebool);
+            if (nrb == 0) return result<bool>((bool*) &falsebool);
             else nrb--;
         }
         
-        else if (start->val->props.commasep && !nrb)
+        else if (start->val->props.commasep && (nrb == 0))
+        {
+            // bres = isftype(tk, os);
+            // _validate(bres)
+            // if (*bres.value)
+            //     return result<bool>((bool*) &falsebool);
+            // return result<bool>((bool*) &truebool);
             return result<bool>((bool*) &truebool);
+        }
         
         start = start->next;
     }
@@ -252,7 +271,7 @@ result<bool> isftype(tokenizer &tk, llnode<token> *start)
             else nrb--;
         }
         
-        else if (start->val->props.colon)
+        else if (start->val->props.colon && (nrb == 0))
             return result<bool>((bool*) &truebool);
         
         start = start->next;
@@ -343,11 +362,11 @@ result<astnode> processtuple(tokenizer &tk)
 /// @brief processes an ftype
 result<astnode> processftype(tokenizer &tk)
 {
-    tk.prestrip();
     result<token> tokres;
     result<astnode> noderes;
     result<bool> bres;
 
+    tk.prestrip();
     tokres = tk.peek();
     _validatecast(tokres, astnode)
 
@@ -356,209 +375,57 @@ result<astnode> processftype(tokenizer &tk)
     
     tk.gettoken();
 
-    ll<astnode> inputs, outputs;
+    astnode *inp = new astnode, *out = new astnode, *ftypenode = new astnode;
+    // ll<astnode> inputs, outputs;
 
     while (true)
     {
         tk.prestrip();
-        tokres = tk.gettoken();
+        tokres = tk.peek();
         _validatecast(tokres, astnode)
 
         if (tokres.value->props.colon)
+        {
+            tk.gettoken();
             break;
-        
-        else if (tokres.value->props.identifier)
+        }
+        else if (tokres.value->props.commasep)
         {
-            inputs.postpend(new astnode(tokres.value));
-
-            tk.prestrip();
-            tokres = tk.peek();
-            _validatecast(tokres, astnode);
-
-            if (!(tokres.value->props.commasep || tokres.value->props.colon))
-            {
-                dstring emsg;
-
-                emsg.append("\n");
-                emsg.append(getlineat(tk, tokres.value->linenumber));
-                emsg.append("\nExpected `,` or `:` after datatype `");
-                emsg.append(inputs.end->val->tok->tokenstr);
-                emsg.append("`, instead got `");
-                emsg.append(tokres.value->tokenstr);
-                emsg.append("`!");
-
-                return result<astnode>(253, emsg.getstring());
-            }
+            tk.gettoken();
         }
 
-        else if (tokres.value->props.commasep) {}
+        noderes = processtype(tk);
+        _validate(noderes)
 
-        else if ((tokres.value->props.roundbracket))
-        {
-            if (tokres.value->props.right)
-            {
-                dstring emsg;
-
-                emsg.append("\n");
-                emsg.append(getlineat(tk, tokres.value->linenumber));
-                emsg.append("Unexpected `)` in ftype!");
-
-                return result<astnode>(253, emsg.getstring());
-            }
-        
-            if (tk.nexttok != NULL) tk.nexttok = tk.nexttok->prev;
-            bres = istuple(tk, tk.nexttok);
-            _validatecast(bres, astnode)
-
-            if (*bres.value)
-            {
-                noderes = processtuple(tk);
-                _validate(noderes)
-
-                inputs.postpend(noderes.value);
-            }
-            else
-            {
-                bres = isftype(tk, tk.nexttok);
-                _validatecast(bres, astnode)
-
-                if (*bres.value)
-                {
-                    noderes = processftype(tk);
-                    _validate(noderes)
-
-                    inputs.postpend(noderes.value);
-                }
-                else
-                {
-                    dstring emsg;
-
-                    emsg.append("\n");
-                    emsg.append(getlineat(tk, tk.nexttok->val->linenumber));
-                    emsg.append("\nInvalid roundbrackets in ftype!");
-
-                    return result<astnode>(253, emsg.getstring());
-                }
-            }
-        }
-    
-        // else if () clone, ptr keyword stuff goes here
-
-        else
-        {
-            dstring emsg;
-
-            emsg.append("\n");
-            emsg.append(getlineat(tk, tokres.value->linenumber));
-            emsg.append("Unexpected token `");
-            emsg.append(tokres.value->tokenstr);
-            // emsg.append("`, instead got `");
-            // emsg.append(tokres.value->tokenstr);
-            emsg.append("` while processing ftype!");
-
-            return result<astnode>(253, emsg.getstring());
-        }
+        noderes.value->parent = inp;
+        inp->children.postpend(noderes.value);
     }
 
     while (true)
     {
         tk.prestrip();
-        tokres = tk.gettoken();
+        tokres = tk.peek();
         _validatecast(tokres, astnode)
 
         if (tokres.value->props.roundbracket && tokres.value->props.right)
+        {
+            tk.gettoken();
             break;
-        
-        else if (tokres.value->props.identifier)
+        }
+        else if (tokres.value->props.commasep)
         {
-            outputs.postpend(new astnode(tokres.value));
-
-            tk.prestrip();
-            tokres = tk.peek();
-            _validatecast(tokres, astnode);
-
-            if (!(
-                tokres.value->props.commasep ||
-                (tokres.value->props.right && tokres.value->props.roundbracket)
-                ))
-            {
-                dstring emsg;
-
-                emsg.append("\n");
-                emsg.append(getlineat(tk, tokres.value->linenumber));
-                emsg.append("\nExpected `,` or `)` after datatype `");
-                emsg.append(inputs.end->val->tok->tokenstr);
-                emsg.append("`, instead got `");
-                emsg.append(tokres.value->tokenstr);
-                emsg.append("`!");
-
-                return result<astnode>(253, emsg.getstring());
-            }
+            tk.gettoken();
         }
 
-        else if (tokres.value->props.commasep) {}
+        noderes = processtype(tk);
+        _validate(noderes)
 
-        else if ((tokres.value->props.roundbracket))
-        {
-            if (tokres.value->props.right)
-                break;
-        
-            if (tk.nexttok != NULL) tk.nexttok = tk.nexttok->prev;
-            bres = istuple(tk, tk.nexttok);
-            _validatecast(bres, astnode)
-
-            if (*bres.value)
-            {
-                noderes = processtuple(tk);
-                _validate(noderes)
-
-                outputs.postpend(noderes.value);
-            }
-            else
-            {
-                bres = isftype(tk, tk.nexttok);
-                _validatecast(bres, astnode)
-
-                if (*bres.value)
-                {
-                    noderes = processftype(tk);
-                    _validate(noderes)
-
-                    outputs.postpend(noderes.value);
-                }
-                else
-                {
-                    dstring emsg;
-
-                    emsg.append("\n");
-                    emsg.append(getlineat(tk, tk.nexttok->val->linenumber));
-                    emsg.append("\nInvalid roundbrackets in ftype!");
-
-                    return result<astnode>(253, emsg.getstring());
-                }
-            }
-        }
-
-        else
-        {
-            dstring emsg;
-
-            emsg.append("\n");
-            emsg.append(getlineat(tk, tokres.value->linenumber));
-            emsg.append("Unexpected token `");
-            emsg.append(tokres.value->tokenstr);
-            // emsg.append("`, instead got `");
-            // emsg.append(tokres.value->tokenstr);
-            emsg.append("` while processing ftype!");
-
-            return result<astnode>(253, emsg.getstring());
-        }
+        noderes.value->parent = out;
+        out->children.postpend(noderes.value);
     }
 
 
-    astnode *inp = new astnode, *out = new astnode, *ftypenode = new astnode;
-    inp->children = inputs;
-    out->children = outputs;
+
     inp->parent = ftypenode;
     out->parent = ftypenode;
 
@@ -572,77 +439,149 @@ result<astnode> processftype(tokenizer &tk)
 }
 
 
-/// @brief processes any type
+/// @brief processes any type, along with associated keywords like ptr, clone etc.
 result<astnode> processtype(tokenizer &tk)
 {
-    tk.prestrip();
 
     result<token> tokres;
     result<bool> bres;
     result<astnode> noderes;
 
-    astnode *dt = NULL;
+    astnode *dt = new astnode, *holder = NULL;
+    
 
-    tokres = tk.peek();
-    _validatecast(tokres, astnode)
-
-    if (tokres.value->props.identifier)
+    bool dtflag = false;
+    while (!dtflag)
     {
-        tk.gettoken();
-        dt = new astnode(tokres.value);
-    }
-    else if (tokres.value->props.roundbracket && tokres.value->props.left)
-    {
-        bres = istuple(tk, tk.nexttok);
-        _validatecast(bres, astnode)
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
 
-        if (*bres.value)
+        // if (
+        //     (tokres.value->props.identifier && dtflag) ||
+        //     tokres.value->props.colon ||
+        //     tokres.value->props.commasep ||
+        //     tokres.value->props.assigner ||
+        //     (tokres.value->props.roundbracket && tokres.value->props.right)
+        // )
+        // break;
+
+        if (tokres.value->props.identifier)
         {
-            noderes = processtuple(tk);
-            _validate(noderes)
-
-            dt = new astnode;
-            dt->children = (noderes.value->children);
-            dt->tokentraits.tuple = 1;
+            // if (dtflag)
+            //     break;
+            
+            tk.gettoken();
+            dtflag = true;
+            holder = new astnode(tokres.value);
+            holder->parent = dt;
+            dt->children.postpend(holder);
         }
-        else
+        else if (tokres.value->props.clonekeyword)
         {
-            bres = isftype(tk, tk.nexttok);
+            tk.gettoken();
+            dt->tokentraits.clone = 1;
+        }
+        else if (tokres.value->props.ptrdeclarator)
+        {
+            tk.gettoken();
+            dt->tokentraits.pointer = 1;
+        }
+        else if (tokres.value->props.roundbracket && tokres.value->props.left)
+        {
+            bres = istuple(tk, tk.nexttok);
             _validatecast(bres, astnode)
 
             if (*bres.value)
             {
-                noderes = processftype(tk);
+                noderes = processtuple(tk);
                 _validate(noderes)
 
-                dt = noderes.value;
+                noderes.value->parent = dt;
+                dt->children.postpend(noderes.value);
+                dtflag = true;
             }
             else
             {
-                dstring emsg;
+                bres = isftype(tk, tk.nexttok);
+                _validatecast(bres, astnode)
 
-                emsg.append("\n");
-                emsg.append(getlineat(tk, tk.nexttok->val->linenumber));
-                emsg.append("\n\nInvalid type/identifier specification; got unexpected token `");
-                emsg.append(tk.nexttok->val->tokenstr);
-                emsg.append("`!");
+                if (*bres.value)
+                {
+                    noderes = processftype(tk);
+                    _validate(noderes)
 
-                return result<astnode>(252, emsg.getstring());
+                    noderes.value->parent = dt;
+                    dt->children.postpend(noderes.value);
+                    dtflag = true;
+                }
+                else
+                {
+                    dstring emsg;
+
+                    emsg.append(getlineat(tk, tokres.value->linenumber));
+                    emsg.append("\n\nInvalid type in roundbrackets `");
+                    emsg.append(tokres.value->tokenstr);
+                    emsg.append("` while parsing type!");
+
+                    return result<astnode>(253, emsg.getstring());
+                }
             }
         }
-    }
-    else
-    {
-        dstring emsg;
+        else
+        {
+            dstring emsg;
 
-        emsg.append("\n");
-        emsg.append(getlineat(tk, tokres.value->linenumber));
-        emsg.append("\n\nUnexpected token `");
-        emsg.append(tokres.value->tokenstr);
-        emsg.append("`!");
-        
-        return result<astnode>(253, emsg.getstring());
+            emsg.append(getlineat(tk, tokres.value->linenumber));
+            emsg.append("\n\nUnexpected token `");
+            emsg.append(tokres.value->tokenstr);
+            emsg.append("` while parsing type!");
+
+            return result<astnode>(253, emsg.getstring());
+        }
     }
+
+
+    while (true)
+    {
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        if (
+            (tokres.value->props.identifier) ||
+            tokres.value->props.colon ||
+            tokres.value->props.commasep ||
+            tokres.value->props.assigner ||
+            tokres.value->props.statementterminator ||
+            tokres.value->props.brace ||
+            (tokres.value->props.roundbracket)
+        )
+        break;
+
+        if (tokres.value->props.clonekeyword)
+        {
+            tk.gettoken();
+            dt->tokentraits.clone = 1;
+        }
+        else if (tokres.value->props.ptrdeclarator)
+        {
+            tk.gettoken();
+            dt->tokentraits.pointer = 1;
+        }
+        else
+        {
+            dstring emsg;
+
+            emsg.append(getlineat(tk, tokres.value->linenumber));
+            emsg.append("\n\nUnexpected token `");
+            emsg.append(tokres.value->tokenstr);
+            emsg.append("` while parsing type!");
+
+            return result<astnode>(253, emsg.getstring());
+        }
+    }
+
 
     dt->tokentraits.datatype = 1;
     return result<astnode>(dt);
@@ -783,7 +722,30 @@ result<astnode> processstatement(tokenizer &tk)
         }
         else
         {
-            var = type;
+            // var = type;
+            // var->tokentraits.datatype = 0;
+            // var->tokentraits.identifier = 1;
+            // type = NULL;
+
+            if (type->children.root->val->tokentraits.identifier)
+            {
+                var = type->children.root->val;
+            }
+            else if (type->children.root->val->tokentraits.tuple)
+            {
+                var = type->children.root->val;
+            }
+            else if (type->children.root->val->tokentraits.ftype)
+            {
+                dstring emsg;
+
+                emsg.append(getlineat(tk, tokres.value->linenumber));
+                emsg.append("\n\nMissing identifier!");
+                // emsg.append(getlineat(tk, tokres.value->linenumber));
+
+                return result<astnode>(252, emsg.getstring());
+            }
+
             var->tokentraits.datatype = 0;
             type = NULL;
         }
@@ -791,6 +753,39 @@ result<astnode> processstatement(tokenizer &tk)
         tk.prestrip();
         tokres = tk.peek();
         _validatecast(tokres, astnode)
+
+        
+        
+        
+        
+        // tk.prestrip();
+        // llnode<token> *cursor = tk.nexttok;
+        // size_t dist = 0;
+        // while (true)
+        // {
+        //     if (cursor == NULL)
+        //     {
+        //         dstring emsg;
+
+        //         emsg.append("\nUnexpected EOF!");
+
+        //         return result<astnode>(250, emsg.getstring());
+        //     }
+        //     if (cursor->val->props.assigner) break;
+        //     dist++;
+        //     cursor = cursor->next;
+        // }
+
+        // tk.prestrip();
+        // tokres = tk.peek();
+        // _validatecast(tokres, astnode)
+
+        // if (tokres.value->props.identifier)
+        // {
+        //     if ()
+        // }
+        
+
 
         if (!(
             tokres.value->props.statementterminator ||
@@ -1813,6 +1808,14 @@ result<astnode> processscope(tokenizer &tk)
             noderes.value->parent = scopeblock;
             scopeblock->children.postpend(noderes.value);
         }
+
+        else if (tokres.value->props.ptrdeclarator)
+        {
+            noderes = processpointer(tk);
+            _validate(noderes)
+            noderes.value->parent = scopeblock;
+            scopeblock->children.postpend(noderes.value);
+        }
         
         else
         {
@@ -1827,6 +1830,102 @@ result<astnode> processscope(tokenizer &tk)
     return result<astnode>(scopeblock);
 }
 
+
+result<astnode> processparam(tokenizer &tk)
+{
+    tk.prestrip();
+
+    if (!tk.available())
+        return result<astnode>(254, "Unexpected EOF while processing expression!");
+    
+    result<token> tokres;
+    result<astnode> noderes;
+    result<bool> bres;
+
+    astnode *param = new astnode, *id = NULL;
+    param->tokentraits.param = 1;
+
+    
+    
+    noderes = processtype(tk);
+    _validate(noderes)
+
+    noderes.value->parent = param;
+    param->children.postpend(noderes.value);
+
+    tk.prestrip();
+    tokres = tk.peek();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.identifier)
+    {
+
+        if (tokres.value->props.left && tokres.value->props.roundbracket)
+        {
+            bres = istuple(tk, tk.nexttok);
+            _validatecast(bres, astnode)
+
+            if (*bres.value)
+            {
+                noderes = processtuple(tk);
+                _validate(noderes)
+
+                id = noderes.value;
+            }
+            else
+            {
+                dstring emsg;
+
+                emsg.append(getlineat(tk, tokres.value->linenumber));
+                emsg.append("\n\nIdentifier expected, got `");
+                emsg.append(tokres.value->tokenstr);
+                emsg.append("` instead!");
+
+                return result<astnode>(253, emsg.getstring());
+            }
+        }
+        else
+        {
+            dstring emsg;
+
+            emsg.append(getlineat(tk, tokres.value->linenumber));
+            emsg.append("\n\nIdentifier expected, got `");
+            emsg.append(tokres.value->tokenstr);
+            emsg.append("` instead!");
+
+            return result<astnode>(253, emsg.getstring());
+        }
+
+    }
+
+    else
+    {
+        tokres = tk.gettoken();
+        _validatecast(tokres, astnode)
+
+        id = new astnode(tokres.value);
+    }
+
+    if (id == NULL)
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nNo identifier provided!");
+
+        return result<astnode>(252, emsg.getstring());
+    }
+    
+
+
+    id->parent = param;
+    // dt->parent = param;
+    // dt->tokentraits.datatype = 1;
+
+    param->children.postpend(id);
+
+    return result<astnode>(param);
+}
 
 /// @brief processes all types of function definitions, except inline
 result<astnode> processfuncdef(tokenizer &tk)
@@ -1897,108 +1996,37 @@ result<astnode> processfuncdef(tokenizer &tk)
         tk.gettoken();
 
 
-    // std::cout << "Gothere\n";
 
-    while (!(tokres.value->props.right && tokres.value->props.roundbracket))
+    tk.prestrip();
+    tokres = tk.peek();
+    _validatecast(tokres, astnode)
+
+    while (!(tokres.value->props.roundbracket && tokres.value->props.right))
     {
-        buffer = new astnode;
-        buffer->tokentraits.param = 1;
-        
-        tk.prestrip();
-        tokres = tk.peek();
-        _validatecast(tokres, astnode)
-
-        if (tokres.value->props.clonekeyword)
-        {
-            tk.gettoken();
-            buffer->tokentraits.clone = 1;
-        }
-        else if (tokres.value->props.roundbracket && tokres.value->props.right)
-        {
-            tk.gettoken();
-            break;
-        }
-
-        noderes = processtype(tk);
+        noderes = processparam(tk);
         _validate(noderes)
 
-        noderes.value->parent = buffer;
-        buffer->children.postpend(noderes.value);
-
-        tk.prestrip();
-        tokres = tk.peek();
-        _validatecast(tokres, astnode)
-
-        if (tokres.value->props.clonekeyword)
-        {
-            tk.gettoken();
-            buffer->tokentraits.clone = 1;
-        }
-
-        tk.prestrip();
-        tokres = tk.peek();
-        _validatecast(tokres, astnode)
-        
-        if (tokres.value->props.identifier)
-        {
-            tk.gettoken();
-            astnode *holder = new astnode(tokres.value);
-            holder->parent = buffer;
-            buffer->children.postpend(holder);
-        }
-        else
-        {
-            dstring emsg;
-
-            emsg.append("\n");
-            emsg.append(getlineat(tk, tokres.value->linenumber));
-            emsg.append("\n\nUnnamed parameter in func params!");
-            // emsg.append("` in func params!");
-
-            return result<astnode>(253, emsg.getstring());
-        }
-
-
-        tk.prestrip();
-        tokres = tk.peek();
-        _validatecast(tokres, astnode)
-
-        if (tokres.value->props.clonekeyword)
-        {
-            tk.gettoken();
-            buffer->tokentraits.clone = 1;
-        }
+        noderes.value->parent = paramsnode;
+        paramsnode->children.postpend(noderes.value);
 
         tk.prestrip();
         tokres = tk.peek();
         _validatecast(tokres, astnode)
 
         if (tokres.value->props.commasep)
-            tk.gettoken();
-        else if (tokres.value->props.roundbracket && tokres.value->props.right)
         {
             tk.gettoken();
-            buffer->parent = paramsnode;
-            paramsnode->children.postpend(buffer);
+            tk.prestrip();
+            tokres = tk.peek();
+            _validatecast(tokres, astnode)
+        }
+
+        else if ((tokres.value->props.roundbracket && tokres.value->props.right))
+        {
             break;
         }
-        else
-        {
-            dstring emsg;
-
-            emsg.append("\n");
-            emsg.append(getlineat(tk, tokres.value->linenumber));
-            emsg.append("\n\nUnexpected token `");
-            emsg.append(tokres.value->tokenstr);
-            emsg.append("` in func params!");
-
-            return result<astnode>(253, emsg.getstring());
-        }
-
-
-        buffer->parent = paramsnode;
-        paramsnode->children.postpend(buffer);
     }
+    tk.gettoken();
 
     
     tk.prestrip();
