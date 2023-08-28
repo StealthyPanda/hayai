@@ -25,11 +25,15 @@
 // 	// ptr[69] float[1, 2, 3] bruh(0);
 // }
 
-struct human
-{
-	str firstname, lastname;
-	// ui8 age;
-	// ui8 sex;
-}
+// struct human
+// {
+// 	(void : void) clone firstname, lastname;
+// 	// ui8 age;
+// 	// ui8 sex;
+// }
 
 // str firstname;
+
+struct number {}
+
+

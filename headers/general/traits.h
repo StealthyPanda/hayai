@@ -130,6 +130,7 @@ __trait_op(structkeyword)\
 __trait_op(implskeyword)\
 __trait_op(traitkeyword)\
 __trait_op(structdef)\
+__trait_op(traitdef)\
 __trait_op(member)\
 \
 \

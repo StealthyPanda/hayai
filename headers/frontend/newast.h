@@ -2193,8 +2193,102 @@ result<astnode> processstruct(tokenizer &tk)
     return result<astnode>(structnode);
 }
 
+/// @brief processes trait definitions
+result<astnode> processtrait(tokenizer &tk)
+{
+    tk.prestrip();
+
+    if (!tk.available())
+        return result<astnode>(254, "Unexpected EOF while processing expression!");
+    
+    result<token> tokres;
+    result<astnode> noderes;
+    result<bool> bres;
+
+    tk.prestrip();
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.traitkeyword)
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected `trait` keyword, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing trait!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+    astnode *traitnode = new astnode, *id = NULL;
+    traitnode->tokentraits.traitdef = 1;
+
+    tk.prestrip();
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.identifier)
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected identifier for trait definition, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing trait!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+    id = new astnode(tokres.value);
+    id->parent = traitnode;
+
+    tk.prestrip();
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!(tokres.value->props.left && tokres.value->props.brace))
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected `{`, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing trait!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+    // else tk.gettoken();
+
+    while (true)
+    {
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        if (tokres.value->props.brace && tokres.value->props.right)
+        {
+            tk.gettoken();
+            break;
+        }
+
+        noderes = processfuncdef(tk);
+        _validate(noderes)
+
+        noderes.value->parent = traitnode;
+        traitnode->children.postpend(noderes.value);
+    }
+    
 
 
+    id->parent = traitnode;
+    traitnode->children.postpend(id);
+
+    // noderes.value->parent = traitnode;
+    // traitnode->children.postpend(noderes.value);
+
+    return result<astnode>(traitnode);
+}
 
 
 
