@@ -350,8 +350,15 @@ result<astnode> processtuple(tokenizer &tk)
     // std::cout << "Tuple end: ";
     // tk.nexttok->val->print();
     // std::cout << "\n";
-
     astnode *tuplenode = new astnode;
+
+    llnode<astnode> *cursor = items.root;
+    while (cursor != NULL)
+    {
+        cursor->val->parent = tuplenode;
+        cursor = cursor->next;
+    }
+
     tuplenode->children = items;
     tuplenode->tokentraits.tuple = 1;
     tuplenode->tok = NULL;
@@ -2059,6 +2066,132 @@ result<astnode> processfuncdef(tokenizer &tk)
     return result<astnode>(funcdef);
 }
 
+
+/// @brief processes struct definitions
+result<astnode> processstruct(tokenizer &tk)
+{
+    tk.prestrip();
+
+    if (!tk.available())
+        return result<astnode>(254, "Unexpected EOF while processing expression!");
+    
+    result<token> tokres;
+    result<astnode> noderes;
+    result<bool> bres;
+
+    astnode *structnode = new astnode, *id = NULL, *memberbuff = NULL, *holder = NULL;
+    structnode->tokentraits.structdef = 1;
+
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.structkeyword)
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected `struct` keyword, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing struct!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+    tk.prestrip();
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.identifier)
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected identifier for struct definition, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing struct!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+    id = new astnode(tokres.value);
+
+    tk.prestrip();
+    tokres = tk.peek();
+    _validatecast(tokres, astnode)
+
+    if (!(tokres.value->props.brace && tokres.value->props.left))
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected `{` for struct definition, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing struct!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+    else tk.gettoken();
+
+    while (true)
+    {
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        if (tokres.value->props.brace && tokres.value->props.right)
+        {
+            tk.gettoken();
+            break;
+        }
+
+        noderes = processtype(tk);
+        _validate(noderes)
+
+        while (true)
+        {
+            tk.prestrip();
+            tokres = tk.gettoken();
+            _validatecast(tokres, astnode)
+
+            if (tokres.value->props.statementterminator)
+                break;
+            else if (tokres.value->props.identifier)
+            {
+                memberbuff = new astnode;
+                memberbuff->tokentraits.member = 1;
+
+                holder = new astnode(*noderes.value);
+                holder->parent = memberbuff;
+                memberbuff->children.postpend(holder);
+
+                holder = new astnode(tokres.value);
+                holder->parent = memberbuff;
+                memberbuff->children.postpend(holder);
+
+                memberbuff->parent = structnode;
+                structnode->children.postpend(memberbuff);
+            }
+            else if (tokres.value->props.commasep) {}
+            else
+            {
+                dstring emsg;
+
+                emsg.append(getlineat(tk, tokres.value->linenumber));
+                emsg.append("\n\nUnexpected token `");
+                emsg.append(tokres.value->tokenstr);
+                emsg.append("` while processing struct!");
+
+                return result<astnode>(253, emsg.getstring());
+            }
+        }
+
+    }
+
+    id->parent = structnode;
+    structnode->children.postpend(id);
+
+    return result<astnode>(structnode);
+}
 
 
 

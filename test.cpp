@@ -20,6 +20,15 @@ int main()
     res = tk.parse();
     _validateexit(res)
 
+    // llnode<token> *cursor = tk.tokens.root;
+    // while (cursor != NULL)
+    // {
+    //     cursor->val->print();
+    //     std::cout << "\n";
+    //     cursor = cursor->next;
+    // }
+
+
     result<astnode> noderes;
 
     // tk.prestrip();
@@ -29,8 +38,8 @@ int main()
 
     // for (size_t i = 0; i < 3; i++)
     {
-        noderes = processfuncdef(tk);
-        // noderes = processparam(tk);
+        noderes = processstruct(tk);
+        // noderes = processtype(tk);
         _validateexit(noderes);
 
         ast dummy(filename);

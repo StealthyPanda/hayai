@@ -125,6 +125,15 @@ __trait_op(fillvalue) \
 \
 \
 \
+/*struct stuff*/\
+__trait_op(structkeyword)\
+__trait_op(implskeyword)\
+__trait_op(traitkeyword)\
+__trait_op(structdef)\
+__trait_op(member)\
+\
+\
+\
 /*Control flow*/\
 __trait_op(controlflow)\
 __trait_op(cflowkeyword)\
@@ -457,6 +466,9 @@ traits gettraits(stringslice ss)
     else
     {
         if (equal(ss, _fun)) t.functiondeclarator = 1;
+        else if (equal(ss, _struct)) t.structkeyword = 1;
+        else if (equal(ss, _trait)) t.traitkeyword = 1;
+        else if (equal(ss, _impls)) t.implskeyword = 1;
         else if (equal(ss, _return)) t.rkeyword = 1;
         else if (equal(ss, _clone)) t.clonekeyword = 1;
         else if (isstringliteral(ss)) t.stringliteral = 1;

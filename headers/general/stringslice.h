@@ -184,7 +184,7 @@ size_t stringlen(char *str)
 /// @return true if the two are the same, else false
 bool equal(stringslice &ss, char *str)
 {
-    if (length(ss) > stringlen(str)) return false;
+    if (length(ss) != stringlen(str)) return false;
 
     char *buffer = ss.start;
     while (buffer <= ss.end)

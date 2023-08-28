@@ -20,7 +20,16 @@
 // (void, (str : f32)) bruh
 // (f32 : (char, byte))
 
-fun main() : void ptr
+// fun main() : void ptr
+// {
+// 	// ptr[69] float[1, 2, 3] bruh(0);
+// }
+
+struct human
 {
-	// ptr[69] float[1, 2, 3] bruh(0);
+	str firstname, lastname;
+	// ui8 age;
+	// ui8 sex;
 }
+
+// str firstname;
