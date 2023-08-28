@@ -34,6 +34,8 @@
 
 // str firstname;
 
-struct number {}
+// struct number {}
 
-
+impls bruh for me {
+	fun add(){}
+}

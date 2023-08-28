@@ -2290,7 +2290,132 @@ result<astnode> processtrait(tokenizer &tk)
     return result<astnode>(traitnode);
 }
 
+result<astnode> processimpls(tokenizer &tk)
+{
+    tk.prestrip();
 
+    if (!tk.available())
+        return result<astnode>(254, "Unexpected EOF while processing expression!");
+    
+    result<token> tokres;
+    result<astnode> noderes;
+    result<bool> bres;
+
+    tk.prestrip();
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.implskeyword)
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected `impls` keyword, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing implement block!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+    astnode *implnode = new astnode, *t = NULL, *s = NULL;
+    implnode->tokentraits.implblock = 1;
+
+    tk.prestrip();
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.identifier)
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected identifier for trait, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing implement block!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+    t = new astnode(tokres.value);
+    t->parent = implnode;
+
+    tk.prestrip();
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.forkeyword)
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected `for`, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing implement block!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+    tk.prestrip();
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.identifier)
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected identifier for struct type after `for`, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing implement block!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+    s = new astnode(tokres.value);
+    s->parent = implnode;
+
+    tk.prestrip();
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!(tokres.value->props.left && tokres.value->props.brace))
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected `{`, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing implement block!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+    while (true)
+    {
+        tk.prestrip();
+        tokres = tk.peek();
+        _validatecast(tokres, astnode)
+
+        if (tokres.value->props.brace && tokres.value->props.right)
+        {
+            tk.gettoken();
+            break;
+        }
+
+        noderes = processfuncdef(tk);
+        _validate(noderes)
+
+        noderes.value->parent = implnode;
+        implnode->children.postpend(noderes.value);
+    }
+
+    t->parent = implnode;
+    s->parent = implnode;
+
+    implnode->children.postpend(t)->postpend(s);
+
+    return result<astnode>(implnode);
+}
 
 
 /// @brief Breadth first traversal and printing of nodes of the tree.

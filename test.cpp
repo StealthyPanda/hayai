@@ -38,7 +38,7 @@ int main()
 
     // for (size_t i = 0; i < 3; i++)
     {
-        noderes = processstruct(tk);
+        noderes = processimpls(tk);
         // noderes = processtype(tk);
         _validateexit(noderes);
 

@@ -128,6 +128,7 @@ __trait_op(fillvalue) \
 /*struct stuff*/\
 __trait_op(structkeyword)\
 __trait_op(implskeyword)\
+__trait_op(implblock)\
 __trait_op(traitkeyword)\
 __trait_op(structdef)\
 __trait_op(traitdef)\
