@@ -3,7 +3,6 @@
 // #include "./headers/frontend/newtok.h"
 
 
-
 int main()
 {
     std::cout << "Hajimemashite\n";
@@ -38,7 +37,7 @@ int main()
 
     // for (size_t i = 0; i < 3; i++)
     {
-        noderes = processimpls(tk);
+        noderes = processfuncdef(tk);
         // noderes = processtype(tk);
         _validateexit(noderes);
 

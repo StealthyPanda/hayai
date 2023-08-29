@@ -1,7 +1,7 @@
 #pragma once
 
 #include <limits>
-#include "newtok.h"
+#include "./newtok.h"
 #include "./../general/ll.h"
 #include "./../general/traits.h"
 #include "./../general/strings.h"
@@ -41,6 +41,7 @@ result<astnode> processtype(tokenizer &tk);
 result<astnode> processtuple(tokenizer &tk);
 result<astnode> processscope(tokenizer &tk);
 result<astnode> processindex(tokenizer &tk);
+result<astnode> processunsafe(tokenizer &tk);
 // result<astnode> processscope(tokenizer &tk);
 
 result<bool> istuple(tokenizer &tk, llnode<token> *start);
@@ -218,10 +219,10 @@ result<bool> istuple(tokenizer &tk, llnode<token> *start)
         if (start == NULL)
             return result<bool>(254, "Unexpected EOF!");
         
-        else if (start->val->props.roundbracket && start->val->props.left)
+        else if (start->val->props.left)
             nrb++;
         
-        else if (start->val->props.roundbracket && start->val->props.right)
+        else if (start->val->props.right)
         {
             if (nrb == 0) return result<bool>((bool*) &falsebool);
             else nrb--;
@@ -493,6 +494,11 @@ result<astnode> processtype(tokenizer &tk)
         {
             tk.gettoken();
             dt->tokentraits.pointer = 1;
+        }
+        else if (tokres.value->props.unsafekeyword)
+        {
+            tk.gettoken();
+            dt->tokentraits.unsafe = 1;
         }
         else if (tokres.value->props.roundbracket && tokres.value->props.left)
         {
@@ -1039,6 +1045,28 @@ result<astnode> processexpression(tokenizer &tk)
             current = buffer;
         }
 
+        else if (tokres.value->props.squarebracket)
+        {
+            tk.nexttok = tk.nexttok->prev;
+
+            noderes = processindex(tk);
+            _validate(noderes)
+
+            buffer = new astnode;
+            buffer->tokentraits.op = 1;
+            buffer->tokentraits.opindex = 1;
+
+            holder = current->children.postpop();
+            holder->parent = buffer;
+            buffer->children.postpend(holder);
+
+            noderes.value->parent = buffer;
+            buffer->children.postpend(noderes.value);
+
+            buffer->parent = current;
+            current->children.postpend(buffer);
+        }
+
         else if (tokres.value->props.roundbracket)
         {
             if (tokres.value->props.right)
@@ -1419,18 +1447,39 @@ result<astnode> processpointer(tokenizer &tk)
     tokres = tk.gettoken();
     _validatecast(tokres, astnode)
 
-    if (!tokres.value->props.ptrdeclarator)
+    if (!(tokres.value->props.ptrdeclarator || tokres.value->props.unsafekeyword))
     {
         dstring emsg;
 
         emsg.append(getlineat(tk, tokres.value->linenumber));
-        emsg.append("\n\nExpecting `ptr` keyword, got `");
+        emsg.append("\n\nExpecting `ptr` or `unsafe` keyword, got `");
         emsg.append(tokres.value->tokenstr);
-        emsg.append("` instead!");
+        emsg.append("` while processing pointer instead!");
 
         return result<astnode>(253, emsg.getstring());
     }
+    else
+    {
+        if (tokres.value->props.unsafekeyword)
+        {
+            pointerdeclaration->tokentraits.unsafe = 1;
+            tk.prestrip();
+            tokres = tk.gettoken();
+            _validatecast(tokres, astnode)
 
+            if (!(tokres.value->props.ptrdeclarator))
+            {
+                dstring emsg;
+
+                emsg.append(getlineat(tk, tokres.value->linenumber));
+                emsg.append("\n\nExpecting `ptr` after unsafe keyword, got `");
+                emsg.append(tokres.value->tokenstr);
+                emsg.append("` while processing pointer instead!");
+
+                return result<astnode>(253, emsg.getstring());
+            }
+        }
+    }
 
     tk.prestrip();
     tokres = tk.peek();
@@ -1820,6 +1869,39 @@ result<astnode> processscope(tokenizer &tk)
         {
             noderes = processpointer(tk);
             _validate(noderes)
+            noderes.value->parent = scopeblock;
+            scopeblock->children.postpend(noderes.value);
+        }
+
+        else if (tokres.value->props.unsafekeyword)
+        {
+            llnode<token> *cursor = tk.nexttok;
+
+            tk.gettoken();
+            tk.prestrip();
+            
+            tokres = tk.peek();
+            _validatecast(tokres, astnode)
+
+            tk.nexttok = cursor;
+
+            if (tokres.value->props.ptrdeclarator)
+                noderes = processpointer(tk);
+            else if (tokres.value->props.left && tokres.value->props.brace)
+                noderes = processunsafe(tk);
+            else
+            {
+                dstring emsg;
+
+                emsg.append(getlineat(tk, tokres.value->linenumber));
+                emsg.append("\n\nExpected `ptr` or scope after unsafe keyword, got `");
+                emsg.append(tokres.value->tokenstr);
+                emsg.append("` instead!");
+
+                return result<astnode>(253, emsg.getstring());
+            }
+            _validate(noderes)
+
             noderes.value->parent = scopeblock;
             scopeblock->children.postpend(noderes.value);
         }
@@ -2290,6 +2372,7 @@ result<astnode> processtrait(tokenizer &tk)
     return result<astnode>(traitnode);
 }
 
+/// @brief processes impls blocks
 result<astnode> processimpls(tokenizer &tk)
 {
     tk.prestrip();
@@ -2416,6 +2499,63 @@ result<astnode> processimpls(tokenizer &tk)
 
     return result<astnode>(implnode);
 }
+
+
+/// @brief processes impls blocks
+result<astnode> processunsafe(tokenizer &tk)
+{
+    tk.prestrip();
+
+    if (!tk.available())
+        return result<astnode>(254, "Unexpected EOF while processing expression!");
+    
+    result<token> tokres;
+    result<astnode> noderes;
+    result<bool> bres;
+
+
+
+    tk.prestrip();
+    tokres = tk.gettoken();
+    _validatecast(tokres, astnode)
+
+    if (!tokres.value->props.unsafekeyword)
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected `unsafe`, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing unsafe block!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+    tk.prestrip();
+    tokres = tk.peek();
+    _validatecast(tokres, astnode)
+
+    if (!(tokres.value->props.brace && tokres.value->props.left))
+    {
+        dstring emsg;
+
+        emsg.append(getlineat(tk, tokres.value->linenumber));
+        emsg.append("\n\nExpected `{`, found `");
+        emsg.append(tokres.value->tokenstr);
+        emsg.append("` while processing unsafe block!");
+
+        return result<astnode>(253, emsg.getstring());
+    }
+
+    noderes = processscope(tk);
+    _validate(noderes)
+    
+    noderes.value->tokentraits.unsafeblock = 1;
+
+    return result<astnode>(noderes.value);
+}
+
+
 
 
 /// @brief Breadth first traversal and printing of nodes of the tree.

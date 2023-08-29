@@ -43,6 +43,7 @@ __trait_op(index) \
 \
 /*operator stuff*/\
 __trait_op(op) \
+__trait_op(opindex) \
 __trait_op(boolop) \
 __trait_op(opplus) \
 __trait_op(opminus) \
@@ -122,6 +123,8 @@ __trait_op(ptrassign) \
 __trait_op(ptrdim) \
 __trait_op(ptrsize) \
 __trait_op(fillvalue) \
+__trait_op(unsafekeyword) \
+__trait_op(unsafe) \
 \
 \
 \
@@ -133,6 +136,7 @@ __trait_op(traitkeyword)\
 __trait_op(structdef)\
 __trait_op(traitdef)\
 __trait_op(member)\
+__trait_op(unsafeblock)\
 \
 \
 \
@@ -468,6 +472,7 @@ traits gettraits(stringslice ss)
     else
     {
         if (equal(ss, _fun)) t.functiondeclarator = 1;
+        else if (equal(ss, _unsafe)) t.unsafekeyword = 1;
         else if (equal(ss, _struct)) t.structkeyword = 1;
         else if (equal(ss, _trait)) t.traitkeyword = 1;
         else if (equal(ss, _impls)) t.implskeyword = 1;

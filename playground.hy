@@ -36,6 +36,24 @@
 
 // struct number {}
 
-impls bruh for me {
-	fun add(){}
+// impls bruh for me {
+// 	fun add(){}
+// }
+
+// 2 * (array[1, bruh()]) ;
+
+// bruh()[1, 3];
+
+// unsafe {
+// 	let bruh = 22;
+// 	let huh = 69;
+// }
+
+fun main() : unsafe ptr ui32 {
+	// // let bruh;
+	// // unsafe ptr hehe;
+	// unsafe {
+	// 	hehe[0] = 22;
+	// }
+	fun bruh() {};
 }
