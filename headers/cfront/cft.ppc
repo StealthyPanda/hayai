@@ -1,0 +1,19 @@
+# 1 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\headers\\cfront\\cft.c"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\headers\\cfront\\cft.c"
+
+# 1 "c:\\users\\stealthypanda\\desktop\\repos\\hayai\\headers\\cfront\\includer.h" 1
+# 3 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\headers\\cfront\\cft.c" 2
+
+const char sep = ' ';
+
+void doer()
+{
+    int x = 0;
+}
+
+int main(int argc, char** argv)
+{
+    return 0;
+}
