@@ -1,438 +1,337 @@
 #pragma once
 
 #include <fstream>
-#include "./../general/stringslice.h"
+
 #include "./../general/ll.h"
 #include "./../general/result.h"
+#include "./../general/cvals.h"
+#include "./../general/strings.h"
+#include "./../general/traits.h"
+#include "./../general/stringslice.h"
 
-/*
-Important:
+#define tokbuffsize 1 << 10
 
-TODO:
-    ->Add comments feature by removing those tokens at the tokenizer level.
-    ->Right now if the input file doesn't exist the compiler is completely crashing,
-      deal with that at the tokenizer level.
-
-*/
-
-
-size_t getlinenumber(char *file, char *pointer)
+struct token
 {
-    size_t line = 0;
-    char *buffer = file;
-    while (buffer < pointer)
-    {
-        if (*buffer++ == '\n') line++;
-    }
-    return line;
-}
+    string tokenstr;
+    size_t linenumber = 0;
+    traits props;
 
-string getlineat(char *file, size_t size, size_t index)
-{
-    char *cursor = file;
-    while (index --> 0)
+    token() {}
+
+    token(string str, size_t ln)
     {
-        while ((*cursor != '\n') && ((cursor - file) < size)) cursor++;
-        cursor++;
+        this->tokenstr = str;
+        this->linenumber = ln;
+        this->props = gettraits(getslice(&this->tokenstr));
     }
 
-    char *end = cursor + 1;
-    while ((*end != '\n') && ((end - file) < size)) end++;
+    void print()
+    {
+        std::cout << "[";
+        ::print(tokenstr);
+        std::cout << "](" << props << " " << this->linenumber << ")";
+    }
 
-    return clonestring(cursor, (size_t)(end - cursor));
-}
+} typedef token;
 
-/// @brief A tokenizer that processes the raw code from a file, and gives individual tokens in stringslices.
+
+
 class tokenizer
 {
 public:
-    tokenizer(const char* filepath);
+    tokenizer(string filepath);
     ~tokenizer();
 
-    const char *filepath;
-    char *file, *start, *end, *buffer;
+    string filepath;
+    size_t ln = 1;
+    char tokbuff[tokbuffsize];
 
+    ll<token> tokens;
+    llnode<token> *nexttok;
 
-    ll<stringslice> tokens;
-    llnode<stringslice> *cursor;
-
-    size_t filesize, length, index = 0, nstrmark = 0;
-
-    stringslice _gettoken();
-    stringslice gettoken();
-    bool _tokensleft();
-    bool tokensleft();
+    std::ifstream inputfile;
 
     result<size_t> read();
     result<size_t> parse();
 
+    result<token> gettoken();
+    result<token> peek();
+    bool available();
+
     void prestrip();
+    void reset();
 
-    stringslice peek();
-
-    stringslice* operator[](size_t index)
-    {
-        return this->tokens[index];
-    }
-
+    void flush();
 };
 
-tokenizer::tokenizer(const char* filepath)
+tokenizer::tokenizer(string filepath)
 {
     this->filepath = filepath;
-}
-
-
-/// @brief Creates a tokenizer. After creating the object, all the tokens in the code are stored in a linked
-/// list called tokens, and need to be parsed to work properly.
-/// @returns a result that evaluates to number of tokens read successfully.
-result<size_t> tokenizer::read()
-{
-    result<size_t> res;
-    res.ok = false;
-
-    //this block creates a file stream, seeks to the end, and gives the number of bytes till this point
-    //(essentially the size of the file in bytes)
-    std::ifstream infile(filepath, std::ifstream::ate | std::ifstream::binary);
-    this->filesize = infile.tellg();
-
-
-    //if file is empty or cant be opened, return error.
-    if (!this->filesize)
-    {
-        dstring emsg;
-
-        emsg.append("Unable to open file or file is empty at `");
-        emsg.append((char*) this->filepath);
-        emsg.append("`!");
-
-        res = result<size_t>(error(42, emsg.getstring()));
-    }
-
-    //store file in a char field
-    this->file = new char[this->filesize];
-
-    infile = std::ifstream(filepath);
-    infile.read(this->file, this->filesize);
-
-    this->start = file;
-    this->end = file;
-    this->buffer = file;
-
-    //count number of \n in the file, and remove them from file size. (some weird bs)
-    while ( (size_t)(this->buffer - this->file) < this->filesize)
-    {
-        if (*this->buffer++ == '\n') filesize--;
-    }
-    this->buffer = NULL;
-
-    if (!this->filesize)
-    {
-        dstring emsg;
-
-        emsg.append("Empty file at `");
-        emsg.append((char*) this->filepath);
-        emsg.append("`!");
-
-        res = result<size_t>(error(42, emsg.getstring()));
-        return res;
-    }
-
-    //append all tokens from the file read to linkedlist
-    while (this->_tokensleft())
-    {
-        this->tokens.postpend(new stringslice(this->_gettoken()));
-    }
-
-    this->length = this->tokens.length;
-
-    size_t *ntokens = new size_t(this->length);
-    res = result<size_t>(ntokens);
-    return res;
-}
-
-///IMPORTANT:
-/// Fix bug in tokenizer::parse where if the first token of the program is ",
-/// things go haywire.
-
-/// @brief Parses the tokens to deal with 2 char operators like ==, =>, |> etc.
-/// @return returns result that evaluates to number of tokens.
-result<size_t> tokenizer::parse() 
-{
-    result<size_t> r;
-    r.ok = true;
-
-    //traversing the linked list of tokens
-    llnode<stringslice> *sslln = this->tokens.root->next, *cursor;
-    stringslice *ssbuff;
-    while (sslln != NULL)
-    {
-        ssbuff = sslln->val;
-
-        //this block deals with all 2 char tokens like <=, >=, |> etc.
-        if ((equal(*ssbuff, (char*)">") && (equal(*sslln->prev->val, (char*)"=") || equal(*sslln->prev->val, (char*)"|") || equal(*sslln->prev->val, (char*)"-"))) ||
-            (equal(*ssbuff, (char*)"=") && (
-            equal(*sslln->prev->val, (char*)"<") ||
-            equal(*sslln->prev->val, (char*)">") ||
-            equal(*sslln->prev->val, (char*)"+") ||
-            equal(*sslln->prev->val, (char*)"-") ||
-            equal(*sslln->prev->val, (char*)"*") ||
-            equal(*sslln->prev->val, (char*)"/") ||
-            equal(*sslln->prev->val, (char*)"!") ||
-            equal(*sslln->prev->val, (char*)"=")
-            )) ||
-            (equal(*ssbuff, (char*)"&") && equal(*sslln->prev->val, (char*)"&")) ||
-            (equal(*ssbuff, (char*)"/") && equal(*sslln->prev->val, (char*)"/")) ||
-            (equal(*ssbuff, (char*)"|") && equal(*sslln->prev->val, (char*)"|")) 
-        )
-        {
-            llnode<stringslice> *newnode = new llnode<stringslice>();
-            stringslice *newslice = new stringslice;
-
-            newnode->val = newslice;
-
-            newslice->start = sslln->prev->val->start;
-            newslice->end = ssbuff->end;
-
-            newnode->prev = sslln->prev->prev;
-            newnode->next = sslln->next;
-
-            sslln->prev->prev->next = newnode;
-            sslln->next->prev = newnode;
-
-            delete sslln->prev;
-            delete sslln;
-
-            this->tokens.length -= 1;
-            this->length -= 1;
-        }
-
-        //dealing with string tokens at tokenizer level
-        if (equal(*ssbuff, (char*)"\""))
-        {
-            llnode<stringslice> *till = sslln->next;
-
-            size_t nnodes = 0;
-            while (!equal(*till->val, (char*)"\""))
-            {
-                //if matching " is not found:
-                if (till == this->tokens.end)
-                {
-                    dstring emsg;
-
-                    size_t ln = getlinenumber(this->file, sslln->val->start);
-
-                    emsg.append("Unpaired `\"` at line ");
-                    emsg.append(tostring(ln + 1));
-                    emsg.append(":\n");
-                    emsg.append(getlineat(this->file, this->filesize, ln));
-
-                    r = result<size_t>(error(69, emsg.getstring()));
-                    
-                    return r;
-                }
-                till = till->next;
-                nnodes++;
-            }
-            nnodes++;
-
-            // this block turns the entire string literal into one token.
-            llnode<stringslice> *newnode = new llnode<stringslice>();
-            newnode->prev = sslln->prev;
-            newnode->next = till->next;
-
-            sslln->prev->next = newnode;
-            till->next->prev = newnode;
-
-            newnode->val = new stringslice;
-            newnode->val->start = ssbuff->start;
-            newnode->val->end = till->val->end;
-
-            till = till->prev;
-            while (till != sslln)
-            {
-                delete till->next;
-                till = till->prev;
-            }
-
-            delete sslln;
-            sslln = newnode;
-
-            this->tokens.length -= nnodes;
-            this->length -= nnodes;
-        }
-
-        
-        //this block deals with numerics, integers, numbers etc.
-        if (sslln->next != NULL)
-        {
-            if (equal(*ssbuff, (char*)".") && isint(*sslln->prev->val) && isdigitsonly(*sslln->next->val))
-            {
-                llnode<stringslice> *newnode = new llnode<stringslice>();
-                stringslice *newslice = new stringslice;
-                newnode->val = newslice;
-
-                newslice->start = sslln->prev->val->start;
-                newslice->end = sslln->next->val->end;
-
-                newnode->prev = sslln->prev->prev;
-                newnode->next = sslln->next->next;
-
-                if (sslln->prev->prev != NULL) sslln->prev->prev->next = newnode;
-                if (sslln->next->next != NULL) sslln->next->next->prev = newnode;
-
-
-                if (sslln->prev == this->tokens.root) this->tokens.root = newnode;
-                if (sslln->next == this->tokens.end) this->tokens.end = newnode;
-
-                delete sslln->prev;
-                delete sslln->next;
-                delete sslln;
-
-                this->tokens.length -= 2;
-                this->length -= 2;
-            }
-            else if (equal(*ssbuff, (char*)"-") && isnum(*sslln->next->val))
-            {
-                llnode<stringslice> *newnode = new llnode<stringslice>();
-                stringslice *newslice = new stringslice;
-                newnode->val = newslice;
-
-                newslice->start = ssbuff->start;
-                newslice->end = sslln->next->val->end;
-
-                newnode->prev = sslln->prev;
-                newnode->next = sslln->next->next;
-
-                sslln->prev->next = newnode;
-                sslln->next->next->prev = newnode;
-
-                delete sslln->next;
-                delete sslln;
-
-                this->tokens.length -= 1;
-                this->length -= 1;
-            }
-        }
-        
-
-        sslln = sslln->next;
-    }
-
-
-    //dealing with comments
-    sslln = this->tokens.root;
-    while (sslln != NULL)
-    {
-        ssbuff = sslln->val;
-        if (equal(*ssbuff, "//"))
-        {
-            cursor = sslln;
-            ssbuff = cursor->val;
-            while ((cursor != NULL) && !equal(*ssbuff, "\n"))
-            {
-                cursor = cursor->next;
-                ssbuff = cursor->val;
-            }
-
-            if (cursor == NULL) cursor = this->tokens.end;
-
-            if (sslln->prev != NULL) sslln->prev->next = cursor->next;
-            if (cursor->next != NULL) cursor->next->prev = sslln->prev;
-
-            size_t size = 0;
-            while (sslln != cursor)
-            {
-                cursor = cursor->prev;
-                delete cursor->next;
-                size++;
-            }
-
-            delete sslln;
-            size++;
-
-            this->tokens.length -= 1;
-            this->length -= 1;
-
-        }
-
-        sslln = sslln->next;
-    }
-
-    this->cursor = this->tokens.root;
-
-    size_t *ntoks = new size_t(this->tokens.length);
-    r = result<size_t>(ntoks);
-    return r;
 }
 
 tokenizer::~tokenizer()
 {
 }
 
-
-
-/// @brief for internal use only
-stringslice tokenizer::_gettoken()
+/// @brief flushes the entire token buffer to null characters
+void tokenizer::flush()
 {
-    stringslice ss = {this->start, this->start};
-    if (!istokenalpha(*this->start))
-    {
-        if (!((*this->start == ' ') || (*this->start == '\n') || (*this->start == '\t')))
-        {
-            ss.start = this->start;
-            ss.end = this->start;
-        }
-        this->start++;
-        this->end = this->start;
-    }
-    else
-    {
-        this->end = this->start + 1;
-        while (istokenalpha(*this->end)) this->end++;
-        ss.start = this->start;
-        ss.end = this->end - 1;
-        this->start = this->end;
-    }
-    return ss;
+    for (size_t i = 0; i < tokbuffsize; i++)
+        this->tokbuff[i] = 0;
 }
 
-/// @brief returns the next stringslice in the sequence, from the raw code.
-stringslice tokenizer::gettoken()
+
+/// @brief reads file and stores all the detected tokens in a linked list
+/// @return result that evaluates to no. of tokens in the file
+result<size_t> tokenizer::read()
 {
-    if (cursor != NULL)
+    char *filepathbuff = getcharstar(this->filepath);
+    if (&this->filepath != NULL)
+        this->inputfile = std::ifstream(filepathbuff);
+    else
+        return result<size_t>(255, "No filepath passed!");
+    
+    if (!this->inputfile)
+        return result<size_t>(255, "File cannot be opened!");
+    
+    for (size_t i = 0; i < tokbuffsize; i++)
+        this->tokbuff[i] = 0;
+    
+    token *buffer;
+
+    char *buff = this->tokbuff;
+    while (!this->inputfile.eof())
     {
-        stringslice retter = *this->cursor->val;
-        this->cursor = this->cursor->next;
+        if (((size_t)(buff - this->tokbuff)) >= (tokbuffsize))
+            return result<size_t>(254, "Token size greater than tokbuffsize!");
+        
+        *buff = this->inputfile.get();
+
+        if (*buff == '\n') this->ln++;
+
+        if (istokenalpha(*buff)) buff++;
+        else
+        {
+            if (buff == this->tokbuff)
+                this->tokens.postpend(new token(clonestring(this->tokbuff, 1), this->ln));
+            else
+            {
+                this->tokens.postpend(new token(clonestringfrom(this->tokbuff, buff), this->ln));
+                this->tokens.postpend(new token(clonestring(buff, 1), this->ln));
+            }
+            buff = this->tokbuff;
+        }
+    }
+    
+    this->tokens.prepend(new token(string(" "), 0));
+    this->tokens.postpend(new token(string(" "), 0));
+
+    this->nexttok = this->tokens.root;
+
+    this->inputfile.close();
+
+    return result<size_t>(&this->tokens.length);
+}
+
+/// @brief parses the read tokens, dealing with 2 character operaters, comments etc.
+/// @return result evaluating to number of tokens after parsing
+result<size_t> tokenizer::parse()
+{
+    llnode<token> *curr = this->tokens.root;
+
+    llnode<token> *buffer, *end;
+
+
+    while ((curr != NULL) && (curr->next != NULL))
+    {
+        if (
+            (curr->val->props.assigner && curr->next->val->props.assigner) ||
+            (curr->val->props.opexclamation && curr->next->val->props.assigner) ||
+            (curr->val->props.oplesserthan && curr->next->val->props.assigner) ||
+            (curr->val->props.opgreaterthan && curr->next->val->props.assigner) ||
+            (curr->val->props.opminus && curr->next->val->props.assigner) ||
+            (curr->val->props.opplus && curr->next->val->props.assigner) ||
+            (curr->val->props.opslash && curr->next->val->props.assigner) ||
+            (curr->val->props.opstar && curr->next->val->props.assigner) ||
+            (curr->val->props.vertline && curr->next->val->props.opgreaterthan) ||
+            (curr->val->props.opminus && curr->next->val->props.opgreaterthan) ||
+            (curr->val->props.assigner && curr->next->val->props.opgreaterthan) ||
+            (curr->val->props.opampersand && curr->next->val->props.opampersand) ||
+            (curr->val->props.vertline && curr->next->val->props.vertline) 
+        )
+        {
+
+            buffer = new llnode<token>;
+            buffer->val = new token((curr->val->tokenstr + curr->next->val->tokenstr), curr->val->linenumber);
+            buffer->prev = curr->prev;
+            buffer->next = curr->next->next;
+
+            if (curr->prev != NULL) curr->prev->next = buffer;
+            if (curr->next->next != NULL) curr->next->next->prev = buffer;
+
+            if (curr == this->tokens.root) this->tokens.root = buffer;
+            if (curr->next == this->tokens.end) this->tokens.end = buffer;
+
+            this->tokens.length--;
+        }
+        else if (
+            (equal(curr->val->tokenstr, _fslash) && equal(curr->next->val->tokenstr, _fslash))
+        )
+        {
+            size_t x = 0;
+            end = curr;
+            // std::cout << "Reached here\n";
+            while ((end->next != NULL) && !equal(end->next->val->tokenstr, _newline))
+            {
+                end = end->next;
+                x++;
+            }
+
+            if (curr->prev != NULL) curr->prev->next = end->next;
+            if (end->next != NULL) end->next->prev = curr->prev;
+
+            if (curr == this->tokens.root) this->tokens.root = buffer;
+            if (curr->next == this->tokens.end) this->tokens.end = buffer;
+
+            this->tokens.length -= (x + 1);
+
+            curr->next = end->next;
+        }
+        
+        else if (
+            curr->val->props.opdot 
+        )
+        {
+            if (
+                (curr->prev != NULL) &&
+                (curr->next != NULL) &&
+                (curr->prev->val->props.isinteger) &&
+                (curr->next->val->props.isdigits) 
+            )
+            {
+                size_t tsize = curr->prev->val->tokenstr.length +
+                               curr->next->val->tokenstr.length +
+                               curr->val->tokenstr.length;
+                
+                char *total = new char[tsize];
+                
+                for (size_t i = 0; i < curr->prev->val->tokenstr.length; i++)
+                    total[i] = curr->prev->val->tokenstr.str[i];
+
+                total[curr->prev->val->tokenstr.length] = '.';
+
+                for (size_t i = 0; i < curr->next->val->tokenstr.length; i++)
+                    total[i + curr->prev->val->tokenstr.length + 1] = curr->next->val->tokenstr.str[i];
+                
+                token *newtok = new token(string(total, tsize), curr->val->linenumber);
+                llnode<token> *newnode = new llnode<token>(newtok);
+                newnode->prev = curr->prev->prev;
+                newnode->next = curr->next->next;
+
+                if (curr->next->next != NULL) curr->next->next->prev = newnode;
+                if (curr->prev->prev != NULL) curr->prev->prev->next = newnode;
+
+                this->tokens.length -= 2;            
+            }
+        }
+        
+        else if (
+            curr->val->props.strmark
+        )
+        {
+            size_t x = 1, tsize = 2;
+            end = curr->next;
+
+            while ((end != NULL) && !end->val->props.strmark)
+            {
+                tsize += end->val->tokenstr.length;
+                end = end->next;
+                x++;
+            }
+
+
+            if (end == NULL)
+                return result<size_t>(253, "Unexpected EOF while looking for `\"`!");
+
+
+            char *concated = new char[tsize];
+            char *buff = concated;
+            llnode<token> *cursor = curr;
+            while (cursor != end->next)
+            {
+                for (size_t i = 0; i < cursor->val->tokenstr.length; i++)
+                {
+                    *buff++ = cursor->val->tokenstr.str[i];
+                }
+                cursor = cursor->next;
+            }
+
+            buffer = new llnode<token>(new token(string(concated, buff - 1), curr->val->linenumber));
+            buffer->prev = curr->prev;
+            buffer->next = end->next;
+
+
+            if (curr->prev != NULL) curr->prev->next = buffer;
+            if (end->next != NULL) end->next->prev = buffer;
+
+            if (curr == this->tokens.root) this->tokens.root = buffer;
+            if (end->next == this->tokens.end) this->tokens.end = buffer;
+
+            this->tokens.length -= x;
+
+            curr->next = end->next;
+        }
+
+        curr = curr->next;
+    }
+
+    this->nexttok = this->tokens.root;
+
+    return result<size_t>(&this->tokens.length);
+}
+
+
+/// @brief returns the next token in sequence, if available
+result<token> tokenizer::gettoken()
+{
+
+    if (this->nexttok != NULL)
+    {
+        auto retter = result<token>(this->nexttok->val);
+        this->nexttok = this->nexttok->next;
         return retter;
     }
+    else
+        return result<token>(255, "All out of tokens!");
 }
 
-/// @brief returns the next stringslice in the sequence, from the raw code WITHOUT ADVANCING
-stringslice tokenizer::peek()
+/// @brief returns the next token in sequence, if available, WITHOUT ADVANCING THE SEQUENCE
+result<token> tokenizer::peek()
 {
-    if (cursor != NULL) return *this->cursor->val;
+
+    if (this->nexttok != NULL)
+        return result<token>(this->nexttok->val);
+    else
+        return result<token>(255, "All out of tokens!");
 }
 
-/// @brief for internal use only
-bool tokenizer::_tokensleft()
+///@brief returns true if tokens are left in sequence
+bool tokenizer::available()
 {
-    return ( (size_t)(end - file) < filesize);
+    return (this->nexttok != NULL);
 }
 
-/// @brief returns true if there are tokens still left in the sequence.
-bool tokenizer::tokensleft()
-{
-    return (cursor != NULL);
-}
 
-/// @brief removes all whitespace tokens from the beginning of the list
+/// @brief moves forward in the sequence until next item is not a whitespace
 void tokenizer::prestrip()
 {
-    stringslice ssbuff = this->peek();
-    while (this->tokensleft() && iswhitespace(ssbuff))
-    {
-        this->gettoken();
-        ssbuff = this->peek();
-    }
+    while ((this->nexttok != NULL) && this->nexttok->val->props.whitespace)
+        this->nexttok = this->nexttok->next;
+}
+
+/// @brief resets the sequence back to the start
+void tokenizer::reset()
+{
+    this->nexttok = this->tokens.root;
 }

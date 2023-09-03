@@ -1,1 +1,1 @@
-print("hello world");
+fun bruh() {}

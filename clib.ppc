@@ -1,11 +1,11 @@
-# 1 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\headers\\cfront\\cft.c"
+# 1 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\clib.c"
 # 1 "<built-in>"
 # 1 "<command-line>"
-# 1 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\headers\\cfront\\cft.c"
+# 1 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\clib.c"
 
-# 1 "C:\\Python311\\Lib\\site-packages\\pycparser\\fake_libc_include/stdlib.h" 1
+# 1 "C:\\Python311\\Lib\\site-packages\\pycparser\\fake_libc_include/stdio.h" 1
 # 1 "C:\\Python311\\Lib\\site-packages\\pycparser\\fake_libc_include/_fake_defines.h" 1
-# 2 "C:\\Python311\\Lib\\site-packages\\pycparser\\fake_libc_include/stdlib.h" 2
+# 2 "C:\\Python311\\Lib\\site-packages\\pycparser\\fake_libc_include/stdio.h" 2
 # 1 "C:\\Python311\\Lib\\site-packages\\pycparser\\fake_libc_include/_fake_typedefs.h" 1
 
 
@@ -227,24 +227,35 @@ typedef enum memory_order {
   memory_order_acq_rel,
   memory_order_seq_cst
 } memory_order;
-# 3 "C:\\Python311\\Lib\\site-packages\\pycparser\\fake_libc_include/stdlib.h" 2
-# 3 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\headers\\cfront\\cft.c" 2
-# 1 "C:\\Python311\\Lib\\site-packages\\pycparser\\fake_libc_include/stdio.h" 1
-# 4 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\headers\\cfront\\cft.c" 2
-# 1 "C:\\Python311\\Lib\\site-packages\\pycparser\\fake_libc_include/stdbool.h" 1
-# 5 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\headers\\cfront\\cft.c" 2
+# 3 "C:\\Python311\\Lib\\site-packages\\pycparser\\fake_libc_include/stdio.h" 2
+# 3 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\clib.c" 2
+# 1 "C:\\Python311\\Lib\\site-packages\\pycparser\\fake_libc_include/stdlib.h" 1
+# 4 "C:\\Users\\StealthyPanda\\Desktop\\repos\\hayai\\clib.c" 2
 
 
-
-
-
-struct cft
+typedef struct vector3
 {
-    char c;
-    int age;
-};
+    float x, y, z;
+} vector3;
 
-int square(int x)
+vector3 add(vector3 *a, vector3 *b)
 {
-    return x * x;
+    vector3 c = {
+        a->x + b->x,
+        a->y + b->y,
+        a->z + b->z
+    };
+
+    return c;
+}
+
+vector3 multiply(vector3 *a, float f)
+{
+    vector3 c = {
+        a->x * f,
+        a->y * f,
+        a->z * f
+    };
+
+    return c;
 }

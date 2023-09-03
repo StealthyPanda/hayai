@@ -67,6 +67,9 @@ char *_struct = (char*)"struct";
 char *_impls = (char*)"impls";
 char *_trait = (char*)"trait";
 char *_unsafe = (char*)"unsafe";
+char *_def = (char*)"def";
+char *_sig = (char*)"sig";
+char *_import = (char*)"import";
 
 char *_stl = (char*)
 "#define ui8 unsigned char\n"

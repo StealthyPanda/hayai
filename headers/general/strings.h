@@ -231,6 +231,7 @@ public:
 
     void append(string);
     void append(char*);
+    string* postpop();
     // void append(char*, char*);
 
     string getstring();
@@ -306,4 +307,25 @@ string dstring::getstring()
     }
 
     return newstring;
+}
+
+string* dstring::postpop()
+{
+    return this->segs.postpop();
+}
+
+
+
+
+
+/// @brief returns a null terminated string
+char* getcharstar(string s)
+{
+    char *news = new char[s.length + 1];
+    for (size_t i = 0; i < s.length; i++)
+    {
+        news[i] = s.str[i];
+    }
+    news[s.length] = 0;
+    return news;
 }

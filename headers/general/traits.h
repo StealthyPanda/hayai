@@ -154,7 +154,17 @@ __trait_op(elseblock)\
 __trait_op(whileblock)\
 __trait_op(breakkeyword)\
 __trait_op(breakstatement)\
-__trait_op(forblock)
+__trait_op(forblock)\
+\
+\
+/*Macro stuff*/\
+__trait_op(macro)\
+__trait_op(signature)\
+__trait_op(sigkeyword)\
+__trait_op(def)\
+__trait_op(defkeyword)\
+__trait_op(importkeyword)\
+__trait_op(macroname)
 
 
 
@@ -478,6 +488,9 @@ traits gettraits(stringslice ss)
         else if (equal(ss, _impls)) t.implskeyword = 1;
         else if (equal(ss, _return)) t.rkeyword = 1;
         else if (equal(ss, _clone)) t.clonekeyword = 1;
+        else if (equal(ss, _sig)) t.sigkeyword = 1;
+        else if (equal(ss, _def)) t.defkeyword = 1;
+        else if (equal(ss, _import)) t.importkeyword = 1;
         else if (isstringliteral(ss)) t.stringliteral = 1;
         else if (equal(ss, _if))
         {
