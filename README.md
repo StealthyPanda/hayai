@@ -273,4 +273,4 @@ saydialogue(r2d2, "Pleasure to meet you!");
 Hayai is meant to be a layer over C, removing the tedious parts and retaining as much control as possible while ensuring memory safety. To interop with C, Hayai compiles to C, which is then compiled by a C compiler to machine code. As of yet, the compiler is still a WIP, and aims to deal with C code with a custom parser.
 
 # Authors
-[![@stealthypanda](https://img.shields.io/badge/Made_with_❤️_by-@stealthypanda🐼-orange?style=for-the-badge&logo=python&link=)](https://sites.google.com/iitj.ac.in/stealthypanda/home)
+[![@stealthypanda](https://img.shields.io/badge/Made_with_❤️_by-@stealthypanda🐼-orange?style=for-the-badge&logo=cplusplus)](https://sites.google.com/iitj.ac.in/stealthypanda/home)
